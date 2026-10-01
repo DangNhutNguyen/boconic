@@ -8,7 +8,7 @@
 
 Boconic Telegram Bot là sản phẩm bot kết nối người mượn sách và người cho mượn sách. Techstack hoàn toàn dựa trên quy trình host, tự động hóa, quản lý các hệ thống thông tin đến từ người dùng. Sản phẩm chỉ sử dụng cho mục đích học tập và phục vụ quá trình học tập, nghiên cứu tại Trường. Hiện tại, sản phẩm này là một phần nằm trong bài làm thử tuyển chọn Câu lạc bộ Trí tuệ nhân tạo – UIT. 
 
-**Sinh viênviên:** Nguyễn Huỳnh Đăng Nhựt.  
+**Sinh viên:** Nguyễn Huỳnh Đăng Nhựt.  
 **Bot:** [@boconic_bot](https://t.me/boconic_bot) - Bot sẽ live cho đến khi hết đợt tuyển hoặc đến khi VPS không sử dụng được ;-;
 
 Toàn bộ README này trình bày vấn đề mà em tiếp cận, cách Boconic kết nối nhu cầu với tài nguyên đang có, cấu trúc kỹ thuật và quy trình để khởi chạy, kiểm tra, quản lý sản phẩm. Với mỗi user, em xem họ vừa là một người học đang cần tài liệu, vừa có thể là người đang giữ những tài nguyên mà người khác cần. 
