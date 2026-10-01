@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Đầu sách Catalog{% endblock %}
+{% block page_title %}Quản lý Đầu sách (Books / Editions){% endblock %}
+
+{% block content %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Thêm đầu sách mới</h2>
+  </div>
+  <div style="padding: 24px;">
+    <form action="/admin/books" method="POST">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Tên sách / Tiêu đề *</label>
+          <input type="text" name="title" required placeholder="Ví dụ: Toán 12 - Tập 1">
+        </div>
+        <div class="form-group">
+          <label>Tác giả (ngăn cách bởi dấu phẩy) *</label>
+          <input type="text" name="authors" required placeholder="Ví dụ: Trần Văn Hạo, Vũ Tuấn">
+        </div>
+        <div class="form-group">
+          <label>Mã ISBN-13</label>
+          <input type="text" name="isbn" placeholder="978-604-0-38827-8">
+        </div>
+        <div class="form-group">
+          <label>Bộ sách / Chương trình</label>
+          <input type="text" name="curriculum" placeholder="Ví dụ: Kết nối tri thức, Chân trời sáng tạo">
+        </div>
+        <div class="form-group">
+          <label>Môn học</label>
+          <input type="text" name="subject" placeholder="Ví dụ: Toán học, Vật lý">
+        </div>
+        <div class="form-group">
+          <label>Khối lớp (1 - 12)</label>
+          <input type="number" name="grade_level" min="1" max="12" placeholder="12">
+        </div>
+        <div class="form-group">
+          <label>Nhà xuất bản</label>
+          <input type="text" name="publisher" placeholder="Nhà xuất bản Giáo dục Việt Nam">
+        </div>
+        <div class="form-group">
+          <label>Năm xuất bản</label>
+          <input type="number" name="publication_year" placeholder="2024">
+        </div>
+      </div>
+
+      {% if custom_fields %}
+      <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px;">
+        <h3 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--text-muted);">Dynamic Custom Fields</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          {% for cf in custom_fields %}
+          <div class="form-group">
+            <label>{{ cf.label }} {% if cf.required %}*{% endif %}</label>
+            {% if cf.field_type == 'single_select' %}
+              <select name="cf_{{ cf.key }}" {% if cf.required %}required{% endif %}>
+                <option value="">-- Chọn {{ cf.label }} --</option>
+                {% for opt in cf.options %}
+                <option value="{{ opt.id }}">{{ opt.label }}</option>
+                {% endfor %}
+              </select>
+            {% elif cf.field_type == 'integer' %}
+              <input type="number" name="cf_{{ cf.key }}" {% if cf.required %}required{% endif %}>
+            {% elif cf.field_type == 'boolean' %}
+              <input type="checkbox" name="cf_{{ cf.key }}" value="true">
+            {% elif cf.field_type == 'textarea' %}
+              <textarea name="cf_{{ cf.key }}" rows="2" {% if cf.required %}required{% endif %}></textarea>
+            {% else %}
+              <input type="text" name="cf_{{ cf.key }}" {% if cf.required %}required{% endif %}>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Lưu đầu sách</button>
+    </form>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Danh mục đầu sách hiện tại ({{ books|length }})</h2>
+    <div style="display: flex; gap: 8px;">
+      <a href="/admin/export?entity=books" class="btn btn-secondary">Xuất CSV</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Tên sách</th>
+          <th>Tác giả</th>
+          <th>Môn / Lớp</th>
+          <th>Bộ sách</th>
+          <th>ISBN-13</th>
+          <th>Bản khả dụng</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if books %}
+          {% for b in books %}
+          <tr>
+            <td><a href="/admin/books/{{ b.id }}" style="color: var(--primary); text-decoration: none; font-weight: 600;">{{ b.title }}</a></td>
+            <td>
+              {% for ba in b.authors %}
+                {{ ba.author.name }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>{{ b.subject or '—' }} (Lớp {{ b.grade_level or '—' }})</td>
+            <td>{{ b.curriculum or '—' }}</td>
+            <td><code>{{ b.isbn13 or 'Không có' }}</code></td>
+            <td>
+              {% set avail = b.copies|selectattr('circulation_status', 'equalto', 'available')|list|length %}
+              <span class="badge {% if avail > 0 %}badge-available{% else %}badge-returned{% endif %}">
+                {{ avail }} / {{ b.copies|length }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có đầu sách nào trong catalog.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

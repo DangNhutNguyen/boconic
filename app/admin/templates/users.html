@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block page_title %}Quản lý người dùng & Tài nguyên{% endblock %}
+
+{% block content %}
+<div class="content-header" style="margin-bottom: 24px;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0;">Quản lý người dùng & Tài nguyên phân phối</h1>
+    <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Theo dõi danh tính, sách mượn/giữ trong thực tế, tài nguyên số, quyền hạn và lịch sử kỷ luật.</p>
+  </div>
+</div>
+
+<!-- Thống kê tổng quan -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px;">
+    <div style="font-size: 0.8rem; font-weight: 600; color: #64748b; text-transform: uppercase;">Tổng số người dùng</div>
+    <div style="font-size: 1.8rem; font-weight: 700; color: #0f172a; margin-top: 4px;">{{ stats.total_users }}</div>
+  </div>
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px;">
+    <div style="font-size: 0.8rem; font-weight: 600; color: #059669; text-transform: uppercase;">Đang hoạt động</div>
+    <div style="font-size: 1.8rem; font-weight: 700; color: #059669; margin-top: 4px;">{{ stats.active_users }}</div>
+  </div>
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px;">
+    <div style="font-size: 0.8rem; font-weight: 600; color: #2563eb; text-transform: uppercase;">Đang mượn / giữ sách</div>
+    <div style="font-size: 1.8rem; font-weight: 700; color: #2563eb; margin-top: 4px;">{{ stats.borrowing_users }}</div>
+  </div>
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px;">
+    <div style="font-size: 0.8rem; font-weight: 600; color: #dc2626; text-transform: uppercase;">Bị khóa / Hạn chế</div>
+    <div style="font-size: 1.8rem; font-weight: 700; color: #dc2626; margin-top: 4px;">{{ stats.flagged_users }}</div>
+  </div>
+</div>
+
+<!-- Thanh tìm kiếm & Bộ lọc -->
+<div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+  <form method="GET" action="/admin/users" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0;">
+    <div style="flex: 1; min-width: 260px;">
+      <input 
+        type="text" 
+        name="search" 
+        value="{{ search_query }}" 
+        placeholder="Tìm theo tên hiển thị, alias, Telegram username hoặc ID số..." 
+        style="width: 100%; padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box;"
+      >
+    </div>
+    <div>
+      <select name="status" style="padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: white;">
+        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Tất cả trạng thái</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Hoạt động (Active)</option>
+        <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>Tạm khóa (Suspended)</option>
+        <option value="banned" {% if status_filter == 'banned' %}selected{% endif %}>Cấm vĩnh viễn (Banned)</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary" style="padding: 8px 18px; font-weight: 600;">Lọc & Tìm kiếm</button>
+      {% if search_query or status_filter != 'all' %}
+      <a href="/admin/users" class="btn btn-secondary" style="padding: 8px 14px; margin-left: 6px;">Xóa lọc</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Bảng danh sách người dùng -->
+<div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+  <div class="table-container" style="overflow-x: auto;">
+    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
+      <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+        <tr>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Người dùng</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Telegram</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Trạng thái</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Uy tín</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Sách đang giữ (Mượn)</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Đang cho mượn</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Sách sở hữu</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Cảnh báo</th>
+          <th style="padding: 12px 16px; font-size: 0.85rem; font-weight: 600; color: #475569;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not users_data %}
+        <tr>
+          <td colspan="9" style="padding: 32px; text-align: center; color: #94a3b8;">
+            Không tìm thấy người dùng nào phù hợp với điều kiện tìm kiếm.
+          </td>
+        </tr>
+        {% endif %}
+
+        {% for item in users_data %}
+        {% set u = item.user %}
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 14px 16px;">
+            <div style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">{{ u.display_name }}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">@{{ u.public_alias }}</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Gia nhập: {{ u.created_at.strftime('%d/%m/%Y') }}</div>
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.9rem;">
+            {% if u.telegram_user_id %}
+            <div style="font-family: monospace; font-weight: 600; color: #1e293b;">{{ u.telegram_user_id }}</div>
+            {% if u.telegram_username %}
+            <div style="font-size: 0.8rem; color: #0284c7;">@{{ u.telegram_username }}</div>
+            {% endif %}
+            {% else %}
+            <span style="color: #94a3b8; font-style: italic;">Chưa liên kết</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px;">
+            {% if u.status == 'active' %}
+            <span class="badge badge-success" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">Hoạt động</span>
+            {% elif u.status == 'suspended' %}
+            <span class="badge badge-warning" style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">Tạm khóa</span>
+            {% elif u.status == 'banned' %}
+            <span class="badge badge-danger" style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">Cấm vĩnh viễn</span>
+            {% else %}
+            <span class="badge" style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem;">{{ u.status }}</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.85rem;">
+            {% if item.trust_profile.reliability_score is not none %}
+            <div style="font-weight: 700; color: #059669; font-size: 0.95rem;">{{ item.trust_profile.reliability_score }}%</div>
+            <div style="font-size: 0.75rem; color: #64748b;">{{ item.trust_profile.history_label }}</div>
+            {% else %}
+            <span style="color: #94a3b8; font-style: italic;">Chưa đủ dữ liệu</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.9rem;">
+            {% if item.active_borrowings > 0 %}
+            <span style="font-weight: 700; color: #2563eb;">{{ item.active_borrowings }} cuốn</span>
+            {% if item.overdue_borrowings > 0 %}
+            <br><span style="color: #dc2626; font-size: 0.75rem; font-weight: 700;">[Quá hạn: {{ item.overdue_borrowings }}]</span>
+            {% endif %}
+            {% else %}
+            <span style="color: #94a3b8;">0</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.9rem;">
+            {% if item.active_lendings > 0 %}
+            <span style="font-weight: 600; color: #475569;">{{ item.active_lendings }} cuốn</span>
+            {% else %}
+            <span style="color: #94a3b8;">0</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.9rem;">
+            <span style="font-weight: 600; color: #0f172a;">{{ item.owned_copies }}</span>
+          </td>
+          <td style="padding: 14px 16px; font-size: 0.9rem;">
+            {% if item.warnings_count > 0 %}
+            <span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem;">
+              Cảnh báo: {{ item.warnings_count }}
+            </span>
+            {% else %}
+            <span style="color: #94a3b8;">0</span>
+            {% endif %}
+          </td>
+          <td style="padding: 14px 16px;">
+            <a href="/admin/users/{{ u.id }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; font-weight: 600; text-decoration: none; display: inline-block;">
+              Chi tiết & Tài nguyên
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Phân trang -->
+  {% if total_pages > 1 %}
+  <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+    <div style="font-size: 0.85rem; color: #64748b;">
+      Hiển thị trang <strong>{{ current_page }}</strong> / <strong>{{ total_pages }}</strong> (Tổng {{ total_count }} người dùng)
+    </div>
+    <div style="display: flex; gap: 6px;">
+      {% if current_page > 1 %}
+      <a href="/admin/users?page={{ current_page - 1 }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">Trang trước</a>
+      {% endif %}
+      {% if current_page < total_pages %}
+      <a href="/admin/users?page={{ current_page + 1 }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">Trang sau</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Sao lưu & Khôi phục{% endblock %}
+{% block page_title %}Quản trị Sao lưu & Khôi phục Dữ liệu{% endblock %}
+
+{% block content %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Tạo bản sao lưu tức thì</h2>
+  </div>
+  <div style="padding: 24px;">
+    <p style="color: var(--text-muted); margin-bottom: 16px;">
+      Bản sao lưu hợp nhất bao gồm toàn bộ cơ sở dữ liệu và manifest kiểm tra tính toàn vẹn SHA-256.
+    </p>
+    <form action="/admin/backups" method="POST">
+      <button type="submit" class="btn btn-primary">
+        Tạo bản sao lưu mới ngay bây giờ
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Danh sách các bản sao lưu đã tạo ({{ backups|length }})</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Tệp lưu trữ</th>
+          <th>Dung lượng</th>
+          <th>Mã băm SHA-256</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if backups %}
+          {% for b in backups %}
+          <tr>
+            <td>{{ b.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+            <td><code>{{ b.archive_path.split('/')[-1].split('\\')[-1] }}</code></td>
+            <td>{{ (b.size_bytes / 1024)|round(1) }} KB</td>
+            <td><code style="font-size: 0.8rem;">{{ b.checksum_sha256[:16] }}...</code></td>
+            <td>
+              <span class="badge badge-available">{{ b.status }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có bản sao lưu nào được tạo.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

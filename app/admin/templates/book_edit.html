@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa — {{ book.title }}{% endblock %}
+{% block page_title %}Sửa thông tin đầu sách{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/books" style="color: var(--primary); text-decoration: none;">Đầu sách</a>
+  <span style="margin: 0 8px;">/</span>
+  <a href="/admin/books/{{ book.id }}" style="color: var(--primary); text-decoration: none;">{{ book.title }}</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>Sửa thông tin</span>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Chỉnh sửa metadata đầu sách</h2>
+    <span style="font-size: 0.85rem; color: var(--text-muted);">ID: <code>{{ book.id[:12] }}...</code></span>
+  </div>
+  <div style="padding: 24px;">
+    <form action="/admin/books/{{ book.id }}/edit" method="POST">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Tên sách / Tiêu đề *</label>
+          <input type="text" name="title" required value="{{ book.title }}">
+        </div>
+        <div class="form-group">
+          <label>Tác giả (ngăn cách bởi dấu phẩy) *</label>
+          <input type="text" name="authors" required value="{{ authors_str }}">
+        </div>
+        <div class="form-group">
+          <label>Mã ISBN (10 hoặc 13)</label>
+          <input type="text" name="isbn" value="{{ book.isbn13 or book.isbn10 or '' }}" placeholder="978-604-0-38827-8">
+        </div>
+        <div class="form-group">
+          <label>Bộ sách / Chương trình</label>
+          <input type="text" name="curriculum" value="{{ book.curriculum or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Môn học</label>
+          <input type="text" name="subject" value="{{ book.subject or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Khối lớp (1 - 12)</label>
+          <input type="number" name="grade_level" min="1" max="12" value="{{ book.grade_level or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Nhà xuất bản</label>
+          <input type="text" name="publisher" value="{{ book.publisher or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Năm xuất bản</label>
+          <input type="number" name="publication_year" value="{{ book.publication_year or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Phiên bản (Edition label)</label>
+          <input type="text" name="edition_label" value="{{ book.edition_label or '' }}" placeholder="Ví dụ: Tái bản lần 5">
+        </div>
+        <div class="form-group">
+          <label>Ngôn ngữ</label>
+          <select name="language">
+            <option value="vi" {% if book.language == 'vi' %}selected{% endif %}>Tiếng Việt</option>
+            <option value="en" {% if book.language == 'en' %}selected{% endif %}>English</option>
+            <option value="fr" {% if book.language == 'fr' %}selected{% endif %}>Français</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mô tả</label>
+        <textarea name="description" rows="3">{{ book.description or '' }}</textarea>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        <button type="submit" name="action" value="save_add_copy" class="btn btn-secondary">Lưu & Thêm bản vật lý</button>
+        <a href="/admin/books/{{ book.id }}" class="btn btn-secondary">Hủy</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

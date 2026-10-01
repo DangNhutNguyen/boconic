@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm chương — {{ book.title }}{% endblock %}
+{% block page_title %}Thêm chương mới{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/books" style="color: var(--primary); text-decoration: none;">Đầu sách</a>
+  <span style="margin: 0 8px;">/</span>
+  <a href="/admin/books/{{ book.id }}" style="color: var(--primary); text-decoration: none;">{{ book.title }}</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>Thêm chương</span>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Khai báo chương cho: {{ book.title }}</h2>
+  </div>
+  <div style="padding: 24px;">
+    <form action="/admin/books/{{ book.id }}/chapters/add" method="POST">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Tiêu đề chương *</label>
+          <input type="text" name="title" required placeholder="Ví dụ: Chương 1 - Hàm số">
+        </div>
+        <div class="form-group">
+          <label>Mã chương (chapter_code)</label>
+          <input type="text" name="chapter_code" placeholder="Ví dụ: CH01, PHAN1">
+        </div>
+        <div class="form-group">
+          <label>Số chương</label>
+          <input type="number" name="chapter_number" min="0" placeholder="1">
+        </div>
+        <div class="form-group">
+          <label>Thứ tự hiển thị (order_index)</label>
+          <input type="number" name="order_index" min="0" value="{{ next_order }}">
+        </div>
+        <div class="form-group">
+          <label>Trang bắt đầu</label>
+          <input type="number" name="page_start" min="1" placeholder="1">
+        </div>
+        <div class="form-group">
+          <label>Trang kết thúc</label>
+          <input type="number" name="page_end" min="1" placeholder="25">
+        </div>
+        <div class="form-group">
+          <label>Cơ sở phân trang</label>
+          <select name="pagination_basis">
+            <option value="edition_page_numbers" selected>Số trang bản in</option>
+            <option value="custom">Đánh số riêng</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nguồn thông tin</label>
+          <select name="source">
+            <option value="manual" selected>Nhập tay</option>
+            <option value="publisher">Nhà xuất bản</option>
+            <option value="ocr">OCR/Scan</option>
+            <option value="community">Cộng đồng đóng góp</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Chương cha (nếu là chương con)</label>
+        <select name="parent_id">
+          <option value="">— Không có (chương gốc) —</option>
+          {% for ch in existing_chapters %}
+          <option value="{{ ch.id }}">{{ ch.title }} ({{ ch.chapter_code or ch.chapter_number }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">Lưu chương</button>
+        <button type="submit" name="action" value="save_add_another" class="btn btn-secondary">Lưu & Thêm tiếp</button>
+        <a href="/admin/books/{{ book.id }}" class="btn btn-secondary">Hủy</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

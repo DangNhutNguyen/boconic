@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Quản trị hệ thống{% endblock %} — Boconic</title>
+  <link rel="stylesheet" href="/admin/static/css/admin.css">
+  <script src="https://unpkg.com/htmx.org@1.9.11" defer></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-badge">B</div>
+      <div>
+        <div class="sidebar-title">Boconic</div>
+        <div style="font-size: 0.75rem; color: #94a3b8;">Admin Console v2.0</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Vận hành & Phân phối</div>
+      <a href="/admin/dashboard" class="nav-link {% if active_nav == 'dashboard' %}active{% endif %}">
+        Bảng điều khiển
+      </a>
+      <a href="/admin/users" class="nav-link {% if active_nav == 'users' %}active{% endif %}">
+        Quản lý người dùng
+      </a>
+      <a href="/admin/requests" class="nav-link {% if active_nav == 'requests' %}active{% endif %}">
+        Nhu cầu & Đề nghị
+      </a>
+      <a href="/admin/inventory" class="nav-link {% if active_nav == 'inventory' %}active{% endif %}">
+        Kho & Thư viện
+      </a>
+      <a href="/admin/books" class="nav-link {% if active_nav == 'books' %}active{% endif %}">
+        Đầu sách (Catalog)
+      </a>
+      <a href="/admin/copies" class="nav-link {% if active_nav == 'copies' %}active{% endif %}">
+        Bản sách vật lý
+      </a>
+      <a href="/admin/partial-materials" class="nav-link {% if active_nav == 'partial_materials' %}active{% endif %}">
+        Tài liệu 1 phần & Bản in
+      </a>
+      <a href="/admin/collections" class="nav-link {% if active_nav == 'collections' %}active{% endif %}">
+        Bộ sưu tập ủy quyền
+      </a>
+      <a href="/admin/chapter-proposals" class="nav-link {% if active_nav == 'chapter_proposals' %}active{% endif %}">
+        Đề xuất chương
+      </a>
+      <a href="/admin/loans" class="nav-link {% if active_nav == 'loans' %}active{% endif %}">
+        Lượt mượn & Tranh chấp
+      </a>
+      <a href="/admin/moderation" class="nav-link {% if active_nav == 'moderation' %}active{% endif %}">
+        Báo cáo & Cảnh báo
+      </a>
+      <a href="/admin/analytics" class="nav-link {% if active_nav == 'analytics' %}active{% endif %}">
+        Thống kê & Jobs
+      </a>
+
+      <div class="nav-section">Dữ liệu & Mở rộng</div>
+      <a href="/admin/custom-fields" class="nav-link {% if active_nav == 'custom_fields' %}active{% endif %}">
+        Thuộc tính mở rộng
+      </a>
+      <a href="/admin/import" class="nav-link {% if active_nav == 'import' %}active{% endif %}">
+        Nhập liệu CSV Wizard
+      </a>
+
+      <div class="nav-section">Hệ thống & An toàn</div>
+      <a href="/admin/process-audit" class="nav-link {% if active_nav == 'process_audit' %}active{% endif %}">
+        Chẩn đoán quy trình
+      </a>
+      <a href="/admin/audit" class="nav-link {% if active_nav == 'audit' %}active{% endif %}">
+        Nhật ký Audit
+      </a>
+      <a href="/admin/backups" class="nav-link {% if active_nav == 'backups' %}active{% endif %}">
+        Sao lưu & Khôi phục
+      </a>
+      <a href="/admin/roles" class="nav-link {% if active_nav == 'roles' %}active{% endif %}">
+        Phân quyền & RBAC
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>Môi trường: Production</span>
+      <form action="/admin/logout" method="POST" style="margin: 0;">
+        <button type="submit" class="btn-logout">Thoát</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main Wrapper -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <h1 class="page-title">{% block page_title %}Tổng quan{% endblock %}</h1>
+      <div class="topbar-right">
+        <span class="admin-pill">Admin: {{ admin.username if admin else 'SuperAdmin' }}</span>
+      </div>
+    </header>
+
+    <main class="content-area">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Boconic Platform
+Comment=Khởi chạy hệ thống Boconic trên Ubuntu (1 click ấn là chạy)
+Exec=bash -c "cd %k/.. 2>/dev/null || cd \"\$(dirname \"\$0\")\"; ./start.sh; read -p 'Nhấn Enter để đóng...'"
+Icon=utilities-terminal
+Terminal=true
+Categories=Development;

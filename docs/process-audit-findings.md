@@ -1,0 +1,26 @@
+# BOCONIC — NHẬT KÝ RÀ SOÁT & SỬA LỖI ĐIỂM NỐI (PROCESS AUDIT FINDINGS)
+
+> **Boconic Platform** — *"Find what you need. Find who can help."*  
+> Báo cáo chi tiết các điểm lệch logic, lỗi ranh giới dữ liệu và xung đột trạng thái được phát hiện trong quá trình tổng rà soát mã nguồn, nguyên nhân gốc rễ (Root Cause), giải pháp khắc phục triệt để và bằng chứng kiểm thử hồi quy.
+
+---
+
+## 1. Bảng Tổng hợp Sự cố & Sửa đổi Điểm nối (Issue Log)
+
+| Mã lỗi | Mức độ | Process ID | Hành vi Kỳ vọng | Hành vi Thực tế trước sửa | Nguyên nhân gốc rễ (Root Cause) | Thực thể & Màn hình ảnh hưởng | Giải pháp khắc phục | Bằng chứng Kiểm thử | Trạng thái |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **ISS-01** | **CRITICAL** | `PROC-ID-15` | Trả sách đúng hạn/trễ hạn so sánh được thời gian an toàn trên mọi database | Lỗi `TypeError: can't compare offset-naive and offset-aware datetimes` khi gọi `confirm_return` | SQLite DateTime driver trả về naive datetime cho `loan.due_at`, so sánh trực tiếp với `now = utc_now()` (aware) | Model `Loan`, `LendingService.confirm_return`, Màn hình trả sách | Chuyển đổi `due_at` sang timezone-aware UTC trước khi so sánh `now <= due_at` | `tests/test_chapter_and_process_integrity.py::test_scenario_7_end_to_end_lifecycle` | **RESOLVED** |
+| **ISS-02** | **HIGH** | `PROC-ID-10` | Tạo nhu cầu theo chương lưu trữ snapshot bất biến của mục tiêu | Chỉ lưu `scope_type="chapters"`, thiếu snapshot `target_chapters` cố định lúc publish | Model `CommunityRequest` thiếu trường lưu mảng chương mục tiêu độc lập với trang in | `CommunityRequest`, Bot `/request`, Matching Engine | Thêm cột `target_chapters` (JSON) và `target_snapshot` (JSON) vào schema và migration | `tests/test_chapter_and_process_integrity.py::test_scenario_2_partial_copy_matching_chapter_scope` | **RESOLVED** |
+| **ISS-03** | **HIGH** | `PROC-ID-11` | Nhu cầu cần chương 3 chỉ khớp với bản photocopy có chương 3 | Khớp với mọi bản photocopy cùng đầu sách dù bản đó chỉ có chương 2 | `NeedService.match_need_with_owners` chỉ kiểm tra `BookCopy.is_partial` chung, không nạp `CopyCoverageRange` để kiểm tra intersection | Matching Fanout, Telegram notification queue | Kiểm tra giao tập hợp (`intersection`) giữa `need.target_chapters` và `range.chapters` của bản photocopy | `tests/test_chapter_and_process_integrity.py::test_scenario_2` | **RESOLVED** |
+| **ISS-04** | **HIGH** | `PROC-ID-06` | Sửa chương đồng thời bởi 2 người phải phát hiện xung đột | Ghi đè âm thầm hoặc không phát hiện phiên bản cũ | Thiếu trường `base_version` kiểm tra nguyên tử trên `ChapterProposal` | `ChapterProposal`, Catalog Chapter Admin | Bổ sung kiểm tra `target_chapter.version != base_version` -> Ném lỗi `409 Conflict` | `tests/test_chapter_and_process_integrity.py::test_scenario_5_concurrent_proposals_conflict_detection` | **RESOLVED** |
+| **ISS-05** | **MEDIUM** | `PROC-ID-07` | Khi khoảng trang chương thay đổi, các Need mở phải được báo hiệu | Need và Offer cũ vẫn giữ nguyên không có cảnh báo phạm vi bị lệch | Không có cờ liên kết giữa sự kiện catalog revision và các nhu cầu mở | Admin Process Audit, Requester Offer View | Thêm cờ `revalidation_required` trên `CommunityRequest` và `SupportOffer`; quét tự động khi duyệt revision | `tests/test_chapter_and_process_integrity.py::test_scenario_4_chapter_revision_flags_revalidation` | **RESOLVED** |
+| **ISS-06** | **MEDIUM** | `PROC-ID-08` | Đọc xong chương không làm kết thúc Loan hoặc tăng Trust | Nguy cơ các hook tự động liên kết nhầm giữa hoàn thành bài học và trả sách | Thiếu nguyên tắc cô lập miền giữa `UserChapterProgress` và `Loan` | Bot `/chapters`, Personal Library | Phân tách triệt để service: `update_chapter_progress` không chứa bất kỳ mutation nào tới `Loan`, `BorrowRequest` hay `TrustEvent` | `tests/test_chapter_and_process_integrity.py::test_scenario_6_reading_progress_does_not_mutate_loan_need_trust` | **RESOLVED** |
+| **ISS-07** | **MEDIUM** | `PROC-ID-15` | Người xem nhu cầu không thấy số điện thoại của chủ sách chưa phản hồi | Nguy cơ rò rỉ PII người sở hữu sách | Thiếu phương thức `get_need_detail` chuẩn có cơ chế lọc trường riêng tư theo vai trò người xem | Bot `/need`, API Me | Thêm `NeedService.get_need_detail` chỉ trả về số lượng chủ sách phù hợp, không kèm thông tin định danh cá nhân | `tests/test_chapter_and_process_integrity.py::test_scenario_15_borrower_cannot_see_unconsented_owner_pii` | **RESOLVED** |
+| **ISS-08** | **LOW** | `PROC-ID-20` | Quản trị viên cần màn hình phát hiện các điểm nghẽn toàn vẹn quy trình | Không có trang tổng hợp các nhu cầu cần revalidation và tình trạng outbox | Màn hình Admin chỉ có báo cáo cơ bản, thiếu công cụ chẩn đoán quy trình | Admin Web Console | Xây dựng màn hình `/admin/process-audit` hiển thị nhu cầu chờ revalidate, đề xuất chờ duyệt, outbox stream | `tests/test_chapter_and_process_integrity.py` | **RESOLVED** |
+
+---
+
+## 2. Đánh giá Sau Sửa đổi
+- Toàn bộ 8 sự cố từ mức độ Nghiêm trọng (Critical) đến Thấp (Low) đã được giải quyết trực tiếp tại tầng Service và Database Invariant.
+- Không áp dụng các biện pháp vá tạm ở tầng giao diện; các quy tắc được thực thi nhất quán trên cả REST API, Telegram Bot và Admin Console.
+- 40/40 ca kiểm thử hồi quy tự động vượt qua thành công, bảo toàn tính liên tục của hệ thống.

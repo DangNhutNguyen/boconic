@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Chi tiết bản sách — {{ copy.public_code }}{% endblock %}
+{% block page_title %}Chi tiết bản sách vật lý{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/copies" style="color: var(--primary); text-decoration: none;">Bản sách vật lý</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>{{ copy.public_code }}</span>
+</div>
+
+<!-- Copy Header -->
+<div class="data-card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 4px;">
+        <code>{{ copy.public_code }}</code>
+        <span class="badge badge-{{ copy.circulation_status }}" style="margin-left: 8px;">{{ copy.circulation_status }}</span>
+      </h2>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        ID: <code>{{ copy.id[:12] }}...</code> |
+        Sách: <a href="/admin/books/{{ book.id }}" style="color: var(--primary);">{{ book.title }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Info Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Ownership & Custody -->
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title" style="font-size: 0.95rem;">Quyền sở hữu & Giữ sách</h2>
+    </div>
+    <div style="padding: 20px;">
+      <div class="detail-row">
+        <span class="detail-label">Chủ sở hữu (Owner)</span>
+        <span class="detail-value">
+          <a href="/admin/users/{{ copy.owner_id }}" style="color: var(--primary);">{{ owner_alias }}</a>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Người đang giữ (Holder)</span>
+        <span class="detail-value">
+          <a href="/admin/users/{{ copy.current_holder_id }}" style="color: var(--primary);">{{ holder_alias }}</a>
+          {% if copy.owner_id != copy.current_holder_id %}
+            <span style="color: var(--warning); font-size: 0.8rem;">[Không phải chủ sở hữu]</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Barcode</span>
+        <span class="detail-value"><code>{{ copy.barcode }}</code></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physical Details -->
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title" style="font-size: 0.95rem;">Thông tin vật lý & Chính sách</h2>
+    </div>
+    <div style="padding: 20px;">
+      <div class="detail-row">
+        <span class="detail-label">Tình trạng (Condition)</span>
+        <span class="detail-value"><span class="badge" style="background-color: #f0fdf4; color: #166534;">{{ copy.condition }}</span></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Loại bản sách</span>
+        <span class="detail-value">{{ copy.format or 'physical' }}{% if copy.is_partial %} (1 phần){% endif %}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Thời hạn mượn tối đa</span>
+        <span class="detail-value">{{ copy.maximum_loan_days }} ngày</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Chính sách cho mượn</span>
+        <span class="detail-value">{{ copy.lending_policy }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Quyền hiển thị</span>
+        <span class="detail-value">{{ copy.visibility }}</span>
+      </div>
+      {% if copy.notes %}
+      <div class="detail-row">
+        <span class="detail-label">Ghi chú</span>
+        <span class="detail-value">{{ copy.notes }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Edit Condition Form -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title" style="font-size: 0.95rem;">Cập nhật tình trạng</h2>
+  </div>
+  <div style="padding: 20px;">
+    <form action="/admin/copies/{{ copy.id }}/update" method="POST" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
+        <label>Tình trạng</label>
+        <select name="condition">
+          <option value="new" {% if copy.condition == 'new' %}selected{% endif %}>Mới</option>
+          <option value="like_new" {% if copy.condition == 'like_new' %}selected{% endif %}>Rất tốt</option>
+          <option value="good" {% if copy.condition == 'good' %}selected{% endif %}>Tốt</option>
+          <option value="fair" {% if copy.condition == 'fair' %}selected{% endif %}>Khá</option>
+          <option value="poor" {% if copy.condition == 'poor' %}selected{% endif %}>Kém</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
+        <label>Hiển thị</label>
+        <select name="visibility">
+          <option value="published" {% if copy.visibility == 'published' %}selected{% endif %}>Công khai</option>
+          <option value="internal" {% if copy.visibility == 'internal' %}selected{% endif %}>Nội bộ</option>
+          <option value="private" {% if copy.visibility == 'private' %}selected{% endif %}>Riêng tư</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0; flex: 1;">
+        <label>Ghi chú cập nhật</label>
+        <input type="text" name="notes" placeholder="Lý do cập nhật (tùy chọn)">
+      </div>
+      <button type="submit" class="btn btn-primary" style="height: 38px;">Lưu cập nhật</button>
+    </form>
+  </div>
+</div>
+
+<!-- Active Loans -->
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title" style="font-size: 0.95rem;">Lịch sử giao dịch mượn</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Trạng thái</th>
+          <th>Người mượn</th>
+          <th>Ngày bắt đầu</th>
+          <th>Hạn trả</th>
+          <th>Ngày trả</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if loans %}
+          {% for loan in loans %}
+          <tr>
+            <td><span class="badge badge-{{ loan.status }}">{{ loan.status }}</span></td>
+            <td>{{ loan.borrower.public_alias if loan.borrower else 'N/A' }}</td>
+            <td>{{ loan.created_at.strftime('%d/%m/%Y') if loan.created_at else '—' }}</td>
+            <td>{{ loan.due_at.strftime('%d/%m/%Y') if loan.due_at else '—' }}</td>
+            <td>{{ loan.returned_at.strftime('%d/%m/%Y') if loan.returned_at else '—' }}</td>
+            <td>
+              <a href="/admin/loans/{{ loan.id }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Chi tiết</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Chưa có giao dịch mượn nào.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.detail-row { margin-bottom: 12px; }
+.detail-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+.detail-value { font-size: 0.95rem; color: var(--text-main); }
+</style>
+{% endblock %}

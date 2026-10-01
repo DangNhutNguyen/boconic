@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-header">
+  <div>
+    <h1>Chẩn đoán & Audit Quy trình Hệ thống (Process Diagnostics)</h1>
+    <p class="subtitle">Giám sát các điểm nối nghiệp vụ, tính toàn vẹn trạng thái và các sự kiện outbox.</p>
+  </div>
+</div>
+
+<div class="metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+  <div class="card metric-card">
+    <div class="metric-title">Nhu cầu cần Revalidation</div>
+    <div class="metric-value" style="color: {% if revalidation_needs|length > 0 %}#f59e0b{% else %}var(--text-main){% endif %};">
+      {{ revalidation_needs|length }}
+    </div>
+    <div class="metric-sub">Do phạm vi trang chương thay đổi</div>
+  </div>
+
+  <div class="card metric-card">
+    <div class="metric-title">Đề xuất chương chờ duyệt</div>
+    <div class="metric-value">{{ pending_proposals_count }}</div>
+    <div class="metric-sub">Cần admin/moderator thẩm tra</div>
+  </div>
+
+  <div class="card metric-card">
+    <div class="metric-title">Giao dịch đang mượn</div>
+    <div class="metric-value">{{ active_loans_count }}</div>
+    <div class="metric-sub">{{ overdue_loans_count }} lượt quá hạn</div>
+  </div>
+
+  <div class="card metric-card">
+    <div class="metric-title">Sự kiện Outbox chờ phát</div>
+    <div class="metric-value">{{ pending_outbox_count }}</div>
+    <div class="metric-sub">Durable queue</div>
+  </div>
+</div>
+
+{% if revalidation_needs %}
+<div class="card" style="margin-bottom: 25px; border-left: 4px solid #f59e0b;">
+  <h3 style="margin-top: 0; color: #f59e0b;">Nhu cầu sách đang chờ Revalidation</h3>
+  <p class="text-muted">Các nhu cầu dưới đây bị ảnh hưởng bởi thay đổi danh mục/khoảng trang của chương. Đề nghị hỗ trợ liên quan cần được đối chiếu lại.</p>
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tên sách</th>
+          <th>Người yêu cầu</th>
+          <th>Phạm vi cần</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in revalidation_needs %}
+        <tr>
+          <td><code>{{ n.id[:8] }}...</code></td>
+          <td><strong>{{ n.title_query }}</strong></td>
+          <td>{{ n.user.display_name if n.user else n.user_id }}</td>
+          <td>
+            <span class="badge">{{ n.scope_type }}</span>
+            {% if n.target_chapters %}
+            <br><small>Chương: {{ n.target_chapters | join(', ') }}</small>
+            {% endif %}
+          </td>
+          <td><span class="badge badge-warning">Cần Revalidate</span></td>
+          <td>
+            <form action="/admin/process-audit/resolve-revalidation/{{ n.id }}" method="POST">
+              <button type="submit" class="btn btn-sm btn-secondary">Đã xác minh</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top: 0;">Sự kiện Outbox gần đây (Event Stream Audit)</h3>
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Loại sự kiện</th>
+          <th>Đối tượng</th>
+          <th>ID đối tượng</th>
+          <th>Trạng thái</th>
+          <th>Chi tiết payload</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ev in recent_outbox %}
+        <tr>
+          <td style="white-space: nowrap; font-size: 0.85rem;">{{ ev.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td><code>{{ ev.event_type }}</code></td>
+          <td>{{ ev.aggregate_type }}</td>
+          <td><code>{{ ev.aggregate_id[:8] if ev.aggregate_id else 'N/A' }}...</code></td>
+          <td>
+            {% if ev.processed_at %}
+            <span class="badge badge-success">Processed</span>
+            {% else %}
+            <span class="badge badge-warning">Pending</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.85rem; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <code>{{ ev.payload }}</code>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+            Không có sự kiện outbox nào gần đây.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

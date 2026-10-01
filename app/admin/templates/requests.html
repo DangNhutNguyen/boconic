@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Nhu cầu & Đề nghị hỗ trợ{% endblock %}
+{% block page_title %}Quản lý Nhu cầu sách & Đề nghị hỗ trợ{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="/admin/requests" class="btn {% if not current_status %}btn-primary{% else %}btn-secondary{% endif %}">Tất cả</a>
+      <a href="/admin/requests?status=open" class="btn {% if current_status == 'open' %}btn-primary{% else %}btn-secondary{% endif %}">Đang mở</a>
+      <a href="/admin/requests?status=fulfilled" class="btn {% if current_status == 'fulfilled' %}btn-primary{% else %}btn-secondary{% endif %}">Đã hoàn tất</a>
+      <a href="/admin/requests?status=cancelled" class="btn {% if current_status == 'cancelled' %}btn-primary{% else %}btn-secondary{% endif %}">Đã hủy</a>
+    </div>
+    <div>
+      <span class="badge" style="background: #0284c7; color: white;">Tổng số: {{ requests|length }} nhu cầu</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Mã nhu cầu</th>
+        <th>Người cần (Alias)</th>
+        <th>Tên sách / ISBN</th>
+        <th>Phạm vi cần</th>
+        <th>Số lượng</th>
+        <th>Mức độ</th>
+        <th>Chủ sách khớp</th>
+        <th>Đề nghị</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req, alias, match_count, offer_count in requests %}
+      <tr>
+        <td><code>{{ req.id[:8] }}...</code></td>
+        <td><strong>{{ alias }}</strong></td>
+        <td>
+          <div style="font-weight: 600;">{{ req.title_query }}</div>
+          {% if req.isbn %}
+          <div style="font-size: 0.75rem; color: #64748b;">ISBN: {{ req.isbn }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if req.scope_type == 'full_book' %}
+          <span class="badge" style="background: #e2e8f0; color: #334155;">Cả quyển</span>
+          {% elif req.scope_type == 'page_range' %}
+          <span class="badge" style="background: #fef3c7; color: #92400e;">Trang {{ req.page_range|join('-') }}</span>
+          {% else %}
+          <span class="badge" style="background: #f1f5f9; color: #475569;">{{ req.scope_type }}</span>
+          {% endif %}
+        </td>
+        <td>{{ req.quantity_fulfilled }} / {{ req.quantity }}</td>
+        <td>
+          {% if req.urgency == 'critical' %}
+          <span class="badge badge-danger">Rất gấp</span>
+          {% elif req.urgency == 'urgent' %}
+          <span class="badge badge-warning">Cần gấp</span>
+          {% else %}
+          <span class="badge badge-info">Bình thường</span>
+          {% endif %}
+        </td>
+        <td><strong style="color: #0284c7;">{{ match_count }}</strong> chủ sách</td>
+        <td><strong style="color: #10b981;">{{ offer_count }}</strong> đề nghị</td>
+        <td>
+          {% if req.status == 'open' %}
+          <span class="badge badge-success">Đang mở</span>
+          {% elif req.status == 'fulfilled' %}
+          <span class="badge" style="background: #10b981; color: white;">Hoàn tất</span>
+          {% elif req.status == 'cancelled' %}
+          <span class="badge badge-danger">Đã hủy</span>
+          {% else %}
+          <span class="badge badge-secondary">{{ req.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <form action="/admin/requests/{{ req.id }}/rematch" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-sm btn-secondary" title="Quét lại chủ sách phù hợp">Re-match</button>
+          </form>
+          {% if req.status == 'open' %}
+          <form action="/admin/requests/{{ req.id }}/cancel" method="POST" style="display: inline; margin-left: 4px;">
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn có chắc muốn hủy nhu cầu này?');">Hủy</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="10" style="text-align: center; color: #94a3b8; padding: 2rem;">
+          Không có nhu cầu sách nào trong danh mục này.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

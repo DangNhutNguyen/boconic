@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+
+{% block title %}Hồ sơ người dùng — {{ user.display_name }}{% endblock %}
+{% block page_title %}Chi tiết người dùng & Quản lý tài nguyên{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: #64748b;">
+  <a href="/admin/users" style="color: #2563eb; text-decoration: none; font-weight: 500;">Danh sách người dùng</a>
+  <span style="margin: 0 8px;">/</span>
+  <span style="color: #0f172a; font-weight: 600;">{{ user.display_name }} (@{{ user.public_alias }})</span>
+</div>
+
+{% if message %}
+<div class="alert alert-success" style="margin-bottom: 20px;">
+  [Thông báo] {{ message }}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger" style="margin-bottom: 20px;">
+  [Lỗi] {{ error }}
+</div>
+{% endif %}
+
+<!-- Header Profile Card & Account Operations -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 24px;">
+    
+    <!-- User Info Left -->
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700;">
+        {{ user.display_name[:1].upper() }}
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <h1 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0;">{{ user.display_name }}</h1>
+          {% if user.status == 'active' %}
+          <span class="badge badge-active">Hoạt động (Active)</span>
+          {% elif user.status == 'suspended' %}
+          <span class="badge badge-warning">Tạm khóa (Suspended)</span>
+          {% elif user.status == 'banned' %}
+          <span class="badge badge-banned">Cấm vĩnh viễn (Banned)</span>
+          {% else %}
+          <span class="badge badge-secondary">{{ user.status }}</span>
+          {% endif %}
+        </div>
+        
+        <div style="color: #64748b; font-size: 0.85rem; margin-top: 6px;">
+          Định danh công khai: <strong>@{{ user.public_alias }}</strong> &nbsp;|&nbsp;
+          Mã hệ thống: <code>{{ user.id }}</code>
+        </div>
+        
+        <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
+          Telegram ID: <strong>{{ user.telegram_user_id or 'Chưa liên kết' }}</strong>
+          {% if user.telegram_username %} (<strong>@{{ user.telegram_username }}</strong>){% endif %}
+          &nbsp;|&nbsp; Ngày tham gia: <strong>{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '—' }}</strong>
+        </div>
+        
+        {% if locations %}
+        <div style="font-size: 0.85rem; color: #475569; margin-top: 4px;">
+          Khu vực: <strong>{{ locations[0].district or '' }}{% if locations[0].district %}, {% endif %}{{ locations[0].city or '' }} ({{ locations[0].country }})</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions Right: Status change -->
+    <div style="min-width: 300px; flex: 1; max-width: 420px;">
+      <form method="POST" action="/admin/users/{{ user.id }}/status" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 0;">
+        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 8px;">Thay đổi trạng thái tài khoản:</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <select name="status" class="form-select" style="flex: 1; font-size: 0.85rem; padding: 6px 10px;">
+            <option value="active" {% if user.status == 'active' %}selected{% endif %}>Hoạt động (Active)</option>
+            <option value="suspended" {% if user.status == 'suspended' %}selected{% endif %}>Tạm khóa (Suspended)</option>
+            <option value="banned" {% if user.status == 'banned' %}selected{% endif %}>Cấm vĩnh viễn (Banned)</option>
+          </select>
+          <button type="submit" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem; white-space: nowrap;">Cập nhật</button>
+        </div>
+        <input type="text" name="reason" placeholder="Lý do thay đổi (ghi vào nhật ký audit)..." class="form-input" style="font-size: 0.8rem; padding: 6px 10px;">
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Stats & Trust Overview -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+  <div class="stat-card">
+    <div class="stat-label">Chỉ số tin cậy (Reliability)</div>
+    <div class="stat-value" style="color: #059669;">
+      {{ trust_profile.reliability_score if trust_profile.reliability_score is not none else '—' }}{% if trust_profile.reliability_score is not none %}%{% endif %}
+    </div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">{{ trust_profile.history_label or 'Chưa có lịch sử' }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Trả đúng hạn</div>
+    <div class="stat-value" style="color: #2563eb;">{{ trust_profile.on_time_returns }}</div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Trên tổng số {{ trust_profile.total_returns }} lượt hoàn tất</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Trả trễ / Tranh chấp</div>
+    <div class="stat-value" style="color: {% if trust_profile.late_returns > 0 %}#dc2626{% else %}#64748b{% endif %};">
+      {{ trust_profile.late_returns }}
+    </div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">{{ trust_profile.disputes }} vụ tranh chấp ghi nhận</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Cảnh báo vi phạm</div>
+    <div class="stat-value" style="color: {% if warnings %}#dc2626{% else %}#64748b{% endif %};">
+      {{ warnings|length }}
+    </div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Cảnh báo từ ban quản trị</div>
+  </div>
+</div>
+
+<!-- Navigation Tabs for Detailed Resources -->
+<div style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; overflow-x: auto;">
+  <button type="button" class="tab-btn active" onclick="switchTab('custody')" id="tab-custody">
+    Sách đang mượn & Giữ ({{ borrowed_loans|length }})
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('lent')" id="tab-lent">
+    Đang cho mượn ngoài ({{ lent_loans|length }})
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('owned')" id="tab-owned">
+    Tủ sách sở hữu ({{ owned_copies|length }})
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('digital')" id="tab-digital">
+    Tài nguyên số theo chương ({{ chapter_resources|length }})
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('community')" id="tab-community">
+    Nhu cầu & Đề nghị ({{ open_needs|length + open_offers|length }})
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('progress')" id="tab-progress">
+    Tiến độ học tập
+  </button>
+  <button type="button" class="tab-btn" onclick="switchTab('warnings')" id="tab-warnings">
+    Kỷ luật & Cảnh báo ({{ warnings|length }})
+  </button>
+</div>
+
+<!-- PANEL 1: SÁCH ĐANG MƯỢN & GIỮ TRONG TAY (CUSTODY) -->
+<div id="panel-custody" class="tab-panel">
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Danh sách sách đang mượn và trực tiếp cầm giữ (Custody)</div>
+    </div>
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Đầu sách</th>
+            <th>Mã bản sách</th>
+            <th>Chủ sở hữu (Lender)</th>
+            <th>Ngày nhận sách</th>
+            <th>Hạn hoàn trả</th>
+            <th>Trạng thái</th>
+            <th>Thao tác Quản trị</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not borrowed_loans %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: #94a3b8; padding: 32px;">
+              Người dùng hiện không giữ cuốn sách nào của thành viên khác.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for b in borrowed_loans %}
+          <tr>
+            <td>
+              <div style="font-weight: 600; color: #0f172a;">{{ b.book.title if b.book else 'N/A' }}</div>
+              {% if b.book and b.book.isbn %}
+              <div style="font-size: 0.75rem; color: #64748b;">ISBN: {{ b.book.isbn }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <code>{{ b.book_copy.barcode if b.book_copy else (b.book_copy.public_code if b.book_copy else 'N/A') }}</code>
+            </td>
+            <td>
+              {% if b.lender %}
+              <a href="/admin/users/{{ b.lender.id }}" style="color: #2563eb; font-weight: 600;">
+                {{ b.lender.display_name }} (@{{ b.lender.public_alias }})
+              </a>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td style="color: #64748b; font-size: 0.85rem;">
+              {{ b.loan.handed_over_at.strftime('%d/%m/%Y %H:%M') if b.loan.handed_over_at else 'Chưa bàn giao' }}
+            </td>
+            <td>
+              {% if b.due_at %}
+              <div style="font-weight: 600; color: {% if b.is_overdue %}#dc2626{% else %}#0f172a{% endif %}; font-size: 0.85rem;">
+                {{ b.due_at.strftime('%d/%m/%Y %H:%M') }}
+              </div>
+              {% if b.is_overdue %}
+              <span class="badge badge-banned" style="margin-top: 2px;">QUÁ HẠN</span>
+              {% endif %}
+              {% else %}
+              <span style="color: #94a3b8;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if b.loan.status == 'active' %}
+              <span class="badge badge-info">Đang giữ sách</span>
+              {% elif b.loan.status == 'return_pending' %}
+              <span class="badge badge-warning">Chờ chủ xác nhận trả</span>
+              {% elif b.loan.status == 'reserved' %}
+              <span class="badge badge-secondary">Đang giữ chỗ</span>
+              {% else %}
+              <span class="badge badge-secondary">{{ b.loan.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" action="/admin/users/{{ user.id }}/force-return/{{ b.loan.id }}" style="margin: 0;" onsubmit="return confirm('Bạn có chắc chắn muốn cưỡng chế hoàn tất lượt mượn này? Bản sách sẽ được chuyển về trạng thái sẵn sàng (available).');">
+                <input type="hidden" name="resolution_notes" value="Admin cưỡng chế hoàn tất mượn trả">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  Cưỡng chế hoàn tất
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 2: SÁCH CÁ NHÂN ĐANG CHO NGƯỜI KHÁC MƯỢN -->
+<div id="panel-lent" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Sách cá nhân đang cho thành viên khác mượn (Lent Out)</div>
+    </div>
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Đầu sách</th>
+            <th>Mã bản sách</th>
+            <th>Người đang mượn (Borrower)</th>
+            <th>Hạn hoàn trả</th>
+            <th>Trạng thái giao dịch</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not lent_loans %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 32px;">
+              Người dùng hiện không có sách nào đang cho mượn ngoài.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for l in lent_loans %}
+          <tr>
+            <td style="font-weight: 600;">{{ l.book.title if l.book else 'N/A' }}</td>
+            <td>
+              <code>{{ l.book_copy.barcode if l.book_copy else (l.book_copy.public_code if l.book_copy else 'N/A') }}</code>
+            </td>
+            <td>
+              {% if l.borrower %}
+              <a href="/admin/users/{{ l.borrower.id }}" style="color: #2563eb; font-weight: 600;">
+                {{ l.borrower.display_name }} (@{{ l.borrower.public_alias }})
+              </a>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td style="font-size: 0.85rem;">
+              {{ l.due_at.strftime('%d/%m/%Y %H:%M') if l.due_at else '—' }}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ l.loan.status }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 3: TỦ SÁCH CÁ NHÂN SỞ HỮU -->
+<div id="panel-owned" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="data-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="data-card-title">Tủ sách và bản in sở hữu đã đăng ký ({{ owned_copies|length }})</div>
+      <button type="button" onclick="document.getElementById('declarePartialModal').style.display='block'" class="btn btn-sm btn-primary">
+        Khai báo photocopy 1 phần
+      </button>
+    </div>
+
+    <!-- Modal Khai báo photocopy 1 phần -->
+    <div id="declarePartialModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.5); z-index: 9999; overflow-y: auto;">
+      <div style="background: white; border-radius: 8px; max-width: 520px; margin: 60px auto; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 700;">Khai báo bản photocopy 1 phần</h3>
+          <button type="button" onclick="document.getElementById('declarePartialModal').style.display='none'" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">X</button>
+        </div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 16px;">
+          Khai báo tài liệu học tập cá nhân. Mặc định lưu trữ ở chế độ <strong>Riêng tư (Private)</strong>.
+        </p>
+
+        <form method="POST" action="/admin/users/{{ user.id }}/partial-copy">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-size: 0.85rem;">Chọn đầu sách *</label>
+            <select name="book_id" required class="form-select" style="font-size: 0.85rem;">
+              <option value="">-- Chọn đầu sách --</option>
+              {% for b in books %}
+              <option value="{{ b.id }}">{{ b.title }} ({{ b.isbn or 'Không có ISBN' }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.85rem;">Trang bắt đầu *</label>
+              <input type="number" name="start_page" min="1" placeholder="1" required class="form-input" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.85rem;">Trang kết thúc *</label>
+              <input type="number" name="end_page" min="1" placeholder="50" required class="form-input" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.85rem;">Tình trạng vật lý</label>
+              <select name="condition" class="form-select" style="font-size: 0.85rem;">
+                <option value="good" selected>Tốt (Good)</option>
+                <option value="like_new">Rất tốt (Like New)</option>
+                <option value="new">Mới (New)</option>
+                <option value="fair">Khá (Fair)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.85rem;">Quyền riêng tư</label>
+              <select name="visibility" class="form-select" style="font-size: 0.85rem;">
+                <option value="private" selected>Riêng tư (Private)</option>
+                <option value="internal">Nội bộ nhóm</option>
+                <option value="public">Công khai</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-size: 0.85rem;">Mô tả nguồn gốc</label>
+            <input type="text" name="source_description" placeholder="Bản photo học tập..." class="form-input" style="font-size: 0.85rem;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 0.85rem;">Ghi chú nội bộ</label>
+            <input type="text" name="notes" placeholder="Ghi chú thêm..." class="form-input" style="font-size: 0.85rem;">
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" onclick="document.getElementById('declarePartialModal').style.display='none'" class="btn btn-secondary">Đóng</button>
+            <button type="submit" class="btn btn-primary">Lưu khai báo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Đầu sách</th>
+            <th>Loại tài liệu</th>
+            <th>Tình trạng</th>
+            <th>Lưu thông</th>
+            <th>Người đang giữ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not owned_copies %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 32px;">
+              Người dùng chưa đăng ký bản sách nào trong tủ sách cá nhân.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for c in owned_copies %}
+          <tr>
+            <td>
+              <div style="font-weight: 600; color: #0f172a;">{{ c.book.title if c.book else 'N/A' }}</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Mã: {{ c.barcode or c.public_code }}</div>
+            </td>
+            <td>
+              {% if c.is_partial %}
+              <span class="badge badge-warning">Photo 1 phần</span>
+              {% if c.coverage_ranges %}
+              <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                Trang {{ c.coverage_ranges[0].start_page }}–{{ c.coverage_ranges[0].end_page }}
+              </div>
+              {% endif %}
+              {% else %}
+              <span class="badge badge-info">Toàn cuốn sách</span>
+              {% endif %}
+            </td>
+            <td style="font-size: 0.85rem; color: #475569;">
+              {{ c.condition }}
+            </td>
+            <td>
+              {% if c.circulation_status == 'available' %}
+              <span class="badge badge-active">Sẵn sàng (Available)</span>
+              {% elif c.circulation_status == 'on_loan' %}
+              <span class="badge badge-info">Đang cho mượn</span>
+              {% elif c.circulation_status == 'reserved' %}
+              <span class="badge badge-warning">Đang giữ chỗ</span>
+              {% else %}
+              <span class="badge badge-secondary">{{ c.circulation_status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if c.current_holder and c.current_holder_id != user.id %}
+              <a href="/admin/users/{{ c.current_holder.id }}" style="color: #2563eb; font-weight: 600;">
+                {{ c.current_holder.display_name }}
+              </a>
+              {% else %}
+              <span style="color: #059669; font-weight: 600;">Chính chủ đang giữ</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 4: TÀI NGUYÊN SỐ THEO CHƯƠNG -->
+<div id="panel-digital" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Tài nguyên số theo chương sách đã đóng góp ({{ chapter_resources|length }})</div>
+    </div>
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tiêu đề & Liên kết</th>
+            <th>Chương & Đầu sách</th>
+            <th>Loại tài nguyên</th>
+            <th>Kiểm duyệt bản quyền</th>
+            <th>Ngày đóng góp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not chapter_resources %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 32px;">
+              Chưa có tài nguyên số hoặc file chương nào được đóng góp.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for r in chapter_resources %}
+          <tr>
+            <td>
+              <div style="font-weight: 600; color: #0f172a;">{{ r.title }}</div>
+              {% if r.url %}
+              <div style="font-size: 0.75rem; color: #2563eb;"><a href="{{ r.url }}" target="_blank">{{ r.url }}</a></div>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.chapter %}
+              <strong>Chương {{ r.chapter.chapter_number }}: {{ r.chapter.title }}</strong>
+              {% if r.chapter.book %}
+              <br><small style="color: #64748b;">{{ r.chapter.book.title }}</small>
+              {% endif %}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-secondary">{{ r.resource_type }}</span>
+            </td>
+            <td>
+              {% if r.verification_status == 'verified' %}
+              <span class="badge badge-active">Đã duyệt bản quyền</span>
+              {% elif r.verification_status == 'quarantine' or r.verification_status == 'pending_review' %}
+              <span class="badge badge-warning">Cách ly chờ duyệt</span>
+              {% else %}
+              <span class="badge badge-banned">{{ r.verification_status }}</span>
+              {% endif %}
+            </td>
+            <td style="color: #64748b; font-size: 0.85rem;">
+              {{ r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 5: NHU CẦU & ĐỀ NGHỊ CỘNG ĐỒNG -->
+<div id="panel-community" class="tab-panel" style="display: none;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    
+    <!-- Nhu cầu mở -->
+    <div class="data-card">
+      <div class="data-card-header">
+        <div class="data-card-title">Nhu cầu cần tìm sách ({{ open_needs|length }})</div>
+      </div>
+      <div style="padding: 16px;">
+        {% if not open_needs %}
+        <p style="color: #94a3b8; font-size: 0.85rem; text-align: center; margin: 16px 0;">Không có nhu cầu nào đang mở.</p>
+        {% else %}
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          {% for req in open_needs %}
+          <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+            <div style="font-weight: 600; color: #0f172a; font-size: 0.9rem;">{{ req.book.title if req.book else req.title_query }}</div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+              Phạm vi: <strong>{{ req.scope_type }}</strong>
+              {% if req.target_chapters %} | Chương: <strong>{{ req.target_chapters }}</strong>{% endif %}
+              &nbsp;|&nbsp; Ngày tạo: {{ req.created_at.strftime('%d/%m/%Y') if req.created_at else '—' }}
+            </div>
+            {% if req.revalidation_required %}
+            <span class="badge badge-banned" style="margin-top: 4px;">Cần revalidation</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Đề nghị hỗ trợ -->
+    <div class="data-card">
+      <div class="data-card-header">
+        <div class="data-card-title">Đề nghị hỗ trợ đã gửi ({{ open_offers|length }})</div>
+      </div>
+      <div style="padding: 16px;">
+        {% if not open_offers %}
+        <p style="color: #94a3b8; font-size: 0.85rem; text-align: center; margin: 16px 0;">Không có đề nghị hỗ trợ nào đang chờ.</p>
+        {% else %}
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          {% for off in open_offers %}
+          <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+            <div style="font-weight: 600; color: #0f172a; font-size: 0.9rem;">
+              {{ off.need.book.title if off.need and off.need.book else 'N/A' }}
+            </div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+              Trạng thái: <strong>{{ off.status }}</strong> &nbsp;|&nbsp; {{ off.created_at.strftime('%d/%m/%Y') if off.created_at else '—' }}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PANEL 6: TIẾN ĐỘ HỌC TẬP -->
+<div id="panel-progress" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Tiến độ học tập và ghi chú cá nhân</div>
+    </div>
+    <div style="padding: 20px;">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center;">
+          <div style="font-size: 1.4rem; font-weight: 700; color: #059669;">{{ study_progress.completed_chapters }}</div>
+          <div style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-top: 2px;">Chương đã hoàn tất</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center;">
+          <div style="font-size: 1.4rem; font-weight: 700; color: #2563eb;">{{ study_progress.in_progress_chapters }}</div>
+          <div style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-top: 2px;">Chương đang đọc dở</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center;">
+          <div style="font-size: 1.4rem; font-weight: 700; color: #475569;">{{ study_progress.notes_count }}</div>
+          <div style="font-size: 0.8rem; color: #475569; font-weight: 600; margin-top: 2px;">Ghi chú đã lưu</div>
+        </div>
+      </div>
+
+      {% if not study_progress.records %}
+      <p style="color: #94a3b8; font-size: 0.85rem; text-align: center; margin: 16px 0;">Người dùng chưa bắt đầu học chương sách nào.</p>
+      {% else %}
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Chương sách</th>
+              <th>Đầu sách</th>
+              <th>Trạng thái học</th>
+              <th>Trang đang dừng (Bookmark)</th>
+              <th>Cập nhật gần nhất</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in study_progress.records %}
+            <tr>
+              <td style="font-weight: 600;">
+                Chương {{ p.chapter.chapter_number if p.chapter else '' }}: {{ p.chapter.title if p.chapter else 'N/A' }}
+              </td>
+              <td style="color: #475569; font-size: 0.85rem;">
+                {{ p.book.title if p.book else (p.chapter.book.title if p.chapter and p.chapter.book else 'N/A') }}
+              </td>
+              <td>
+                {% if p.reading_state == 'completed' %}
+                <span class="badge badge-active">Đã đọc xong</span>
+                {% elif p.reading_state == 'in_progress' %}
+                <span class="badge badge-info">Đang đọc</span>
+                {% else %}
+                <span class="badge badge-secondary">Chưa đọc</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.85rem;">
+                {{ p.bookmark_page or '—' }}
+              </td>
+              <td style="color: #64748b; font-size: 0.85rem;">
+                {{ p.updated_at.strftime('%d/%m/%Y %H:%M') if p.updated_at else '—' }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 7: KỶ LUẬT & CẢNH BÁO VI PHẠM -->
+<div id="panel-warnings" class="tab-panel" style="display: none;">
+  <div class="data-card" style="margin-bottom: 24px;">
+    <div class="data-card-header">
+      <div class="data-card-title">Phát cảnh cáo người dùng mới</div>
+    </div>
+    <div style="padding: 20px;">
+      <form method="POST" action="/admin/users/{{ user.id }}/warn">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.85rem;">Phân loại vi phạm *</label>
+            <select name="category" class="form-select" style="font-size: 0.85rem;">
+              <option value="conduct_warning">Hành vi ứng xử (Conduct Warning)</option>
+              <option value="transaction_reminder">Nhắc nhở giao dịch / Quá hạn trả sách</option>
+              <option value="rights_review">Vi phạm bản quyền / Đóng góp số sai phép</option>
+              <option value="validation">Sai lệch thông tin / Khai báo sai số trang</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.85rem;">Mức độ nghiêm trọng *</label>
+            <select name="severity" class="form-select" style="font-size: 0.85rem;">
+              <option value="info">Nhắc nhở (Info)</option>
+              <option value="warning" selected>Cảnh cáo (Warning)</option>
+              <option value="critical">Nghiêm trọng (Critical)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-size: 0.85rem;">Thông điệp gửi người dùng *</label>
+          <input type="text" name="message" placeholder="Ví dụ: Bạn đã quá hạn trả cuốn 'Đại số 10'..." required class="form-input" style="font-size: 0.85rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 0.85rem;">Lý do quản trị & Căn cứ xử lý *</label>
+          <input type="text" name="reason" placeholder="Căn cứ: Trễ hạn 14 ngày..." required class="form-input" style="font-size: 0.85rem;">
+        </div>
+
+        <button type="submit" class="btn btn-outline-danger" style="font-weight: 600;">
+          Ban hành cảnh cáo
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Lịch sử cảnh báo đã phát ({{ warnings|length }})</div>
+    </div>
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>Danh mục</th>
+            <th>Mức độ</th>
+            <th>Nội dung thông điệp</th>
+            <th>Lý do căn cứ</th>
+            <th>Khiếu nại</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if not warnings %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 32px;">
+              Người dùng có lý lịch trong sạch, chưa từng nhận cảnh cáo nào.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for w in warnings %}
+          <tr>
+            <td style="color: #64748b; font-size: 0.85rem; white-space: nowrap;">
+              {{ w.created_at.strftime('%d/%m/%Y %H:%M') if w.created_at else '—' }}
+            </td>
+            <td><strong>{{ w.category }}</strong></td>
+            <td>
+              {% if w.severity == 'critical' %}
+              <span class="badge badge-banned">{{ w.severity }}</span>
+              {% else %}
+              <span class="badge badge-warning">{{ w.severity }}</span>
+              {% endif %}
+            </td>
+            <td style="font-size: 0.85rem;">{{ w.message }}</td>
+            <td style="font-size: 0.85rem; color: #475569; font-style: italic;">{{ w.reason }}</td>
+            <td>
+              {% if w.appeal_status == 'none' %}
+              <span style="color: #94a3b8; font-size: 0.85rem;">Không có</span>
+              {% elif w.appeal_status == 'pending' %}
+              <span class="badge badge-warning">Đang khiếu nại</span>
+              {% else %}
+              <span class="badge badge-secondary">{{ w.appeal_status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.style.display = 'block';
+  const tab = document.getElementById('tab-' + name);
+  if (tab) tab.classList.add('active');
+}
+</script>
+
+{% endblock %}

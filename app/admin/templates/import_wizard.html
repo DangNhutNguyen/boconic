@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Nhập liệu CSV Wizard{% endblock %}
+{% block page_title %}CSV Import Wizard (Nhập dữ liệu bền vững){% endblock %}
+
+{% block content %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Bước 1: Tải lên tệp CSV</h2>
+  </div>
+  <div style="padding: 24px;">
+    {% if message %}
+      <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <form action="/admin/import/upload" method="POST" enctype="multipart/form-data">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Đối tượng nhập dữ liệu *</label>
+          <select name="entity_type" required>
+            <option value="books">Đầu sách (Books / Catalog)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Chế độ nhập (Mode) *</label>
+          <select name="mode" required>
+            <option value="upsert">Cập nhật hoặc thêm mới (Upsert)</option>
+            <option value="create_only">Chỉ thêm mới (Bỏ qua trùng)</option>
+            <option value="update_only">Chỉ cập nhật bản ghi đã có</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 12px;">
+        <label>Chọn tệp CSV (Hỗ trợ UTF-8, UTF-8 BOM, dấu phẩy hoặc chấm phẩy) *</label>
+        <input type="file" name="csv_file" accept=".csv" required style="padding: 8px;">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top: 12px;">
+        Tải lên & Phân tích cấu trúc cột
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if import_history %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Lịch sử các phiên nhập CSV gần đây</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Tên tệp</th>
+          <th>Thực thể</th>
+          <th>Trạng thái</th>
+          <th>Tổng số dòng</th>
+          <th>Tạo mới</th>
+          <th>Cập nhật</th>
+          <th>Lỗi</th>
+          <th>Thời gian</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in import_history %}
+        <tr>
+          <td><code>{{ j.filename }}</code></td>
+          <td>{{ j.entity_type }}</td>
+          <td>
+            <span class="badge {% if j.status == 'completed' %}badge-available{% else %}badge-disputed{% endif %}">
+              {{ j.status }}
+            </span>
+          </td>
+          <td>{{ j.total_rows }}</td>
+          <td><strong style="color: var(--success);">{{ j.created_count }}</strong></td>
+          <td><strong style="color: var(--secondary);">{{ j.updated_count }}</strong></td>
+          <td><strong style="color: var(--danger);">{{ j.error_count }}</strong></td>
+          <td>{{ j.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

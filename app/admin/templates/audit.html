@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Nhật ký Audit{% endblock %}
+{% block page_title %}Nhật ký Kiểm toán Hệ thống (Audit Logs){% endblock %}
+
+{% block content %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Lịch sử thao tác quản trị ({{ logs|length }})</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Thời điểm</th>
+          <th>Người thực hiện</th>
+          <th>Loại</th>
+          <th>Hành động</th>
+          <th>Thực thể</th>
+          <th>Lý do / Ghi chú</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if logs %}
+          {% for log in logs %}
+          <tr>
+            <td>{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+            <td><code>{{ log.actor_id or 'Hệ thống' }}</code></td>
+            <td><span class="badge badge-active">{{ log.actor_type }}</span></td>
+            <td><strong>{{ log.action }}</strong></td>
+            <td>{{ log.entity_type }} ({{ log.entity_id or '—' }})</td>
+            <td>{{ log.reason or '—' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có bản ghi nhật ký audit nào.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

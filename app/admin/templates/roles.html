@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Quản trị Phân quyền (RBAC){% endblock %}
+{% block page_title %}Quản trị Phân quyền & Tài khoản Quản trị (RBAC){% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+  <div class="stat-card">
+    <div class="stat-label">Tài khoản Quản trị</div>
+    <div class="stat-value">{{ admins|length }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Vai trò (Roles)</div>
+    <div class="stat-value">{{ roles|length }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Quyền hạn (Permissions)</div>
+    <div class="stat-value">{{ permissions|length }}</div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Admin Accounts List -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Danh sách Tài khoản Quản trị</div>
+    </div>
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Vai trò (Roles)</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for acc in admins %}
+          <tr>
+            <td style="font-weight: 600;">
+              {{ acc.username }}
+              {% if acc.id == current_admin.id %}
+              <span class="badge badge-info" style="font-size: 0.65rem;">Bạn</span>
+              {% endif %}
+            </td>
+            <td style="color: #64748b; font-size: 0.85rem;">{{ acc.email or "—" }}</td>
+            <td>
+              {% if acc.role_assignments %}
+                {% for ra in acc.role_assignments %}
+                <span class="badge badge-success">{{ ra.role.name }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="badge badge-secondary">Chưa gán vai trò</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if acc.is_active %}
+              <span class="badge badge-active">Hoạt động</span>
+              {% else %}
+              <span class="badge badge-banned">Khóa</span>
+              {% endif %}
+            </td>
+            <td>
+              <form action="/admin/roles/accounts/{{ acc.id }}/toggle-status" method="POST" style="display: inline; margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% if acc.is_active %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" {% if acc.id == current_admin.id %}disabled title="Không thể tự khóa tài khoản của mình"{% endif %}>
+                  Khóa
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-success">Mở khóa</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Admin Account Form -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <div class="data-card-title">Tạo tài khoản Admin</div>
+    </div>
+    <form action="/admin/roles/accounts/create" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 0.85rem;">Tên đăng nhập *</label>
+        <input type="text" name="username" class="form-input" required placeholder="admin_ops" style="font-size: 0.85rem;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 0.85rem;">Email</label>
+        <input type="email" name="email" class="form-input" placeholder="ops@boconic.org" style="font-size: 0.85rem;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 0.85rem;">Mật khẩu khởi tạo *</label>
+        <input type="password" name="password" class="form-input" required minlength="8" placeholder="Tối thiểu 8 ký tự" style="font-size: 0.85rem;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" style="font-size: 0.85rem;">Gán vai trò mặc định</label>
+        <select name="role_id" class="form-select" style="font-size: 0.85rem;">
+          <option value="">-- Không gán vai trò --</option>
+          {% for r in roles %}
+          <option value="{{ r.id }}">{{ r.name }} ({{ r.description or 'Tùy chỉnh' }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Tạo tài khoản</button>
+    </form>
+  </div>
+</div>
+
+<!-- Roles and Permission Matrix -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div class="data-card-header">
+    <div class="data-card-title">Ma trận Phân quyền & Vai trò hệ thống</div>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Roles Matrix -->
+    <div class="data-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tên vai trò</th>
+            <th>Loại</th>
+            <th>Mô tả</th>
+            <th>Quyền hạn đã cấp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in roles %}
+          <tr>
+            <td style="font-weight: 600;">
+              {{ r.name }}
+            </td>
+            <td>
+              {% if r.is_system %}
+              <span class="badge badge-warning">Hệ thống</span>
+              {% else %}
+              <span class="badge badge-secondary">Tùy biến</span>
+              {% endif %}
+            </td>
+            <td style="font-size: 0.85rem; color: #475569;">{{ r.description or "Chưa có mô tả" }}</td>
+            <td>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                {% if r.permissions %}
+                  {% for rp in r.permissions %}
+                  <span class="badge badge-info" style="font-size: 0.7rem; font-family: monospace;">{{ rp.permission.code }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span style="color: #94a3b8; font-size: 0.75rem;">Toàn quyền (Super Admin) hoặc chưa gán</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Create Role Form -->
+    <div>
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #1e293b;">Thêm Vai trò mới</h3>
+      <form action="/admin/roles/create" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 0.85rem;">Mã vai trò (Name) *</label>
+          <input type="text" name="name" class="form-input" required placeholder="librarian" style="font-size: 0.85rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 0.85rem;">Mô tả vai trò</label>
+          <input type="text" name="description" class="form-input" placeholder="Thủ thư phụ trách kho và duyệt mượn" style="font-size: 0.85rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 0.85rem;">Chọn các quyền hạn</label>
+          <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; background: #fafafa;">
+            {% for p in permissions %}
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" name="permissions" value="{{ p.id }}">
+              <span><strong>{{ p.code }}</strong> — <span style="color: #64748b;">{{ p.description }}</span></span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-outline" style="width: 100%;">Tạo vai trò</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

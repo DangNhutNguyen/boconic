@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Bảng điều khiển{% endblock %}
+{% block page_title %}Bảng điều khiển vận hành{% endblock %}
+
+{% block content %}
+<!-- Quick Actions -->
+<div style="display: flex; gap: 8px; margin-bottom: 24px;">
+  <a href="/admin/books" class="btn btn-primary">Thêm đầu sách</a>
+  <a href="/admin/copies" class="btn btn-secondary">Bản sách vật lý</a>
+  <a href="/admin/import" class="btn btn-secondary">Nhập CSV</a>
+  <a href="/admin/export?entity=books" class="btn btn-secondary">Xuất Catalog</a>
+</div>
+
+<!-- Main Metrics -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-label">Người dùng đã đăng ký</div>
+    <div class="metric-value">{{ metrics.users_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Đầu sách trong Catalog</div>
+    <div class="metric-value">{{ metrics.books_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Bản sách vật lý</div>
+    <div class="metric-value">{{ metrics.copies_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Bản khả dụng cho mượn</div>
+    <div class="metric-value highlight-teal">{{ metrics.available_copies_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Lượt sách đang mượn</div>
+    <div class="metric-value">{{ metrics.active_loans_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Đang giữ chỗ chờ giao</div>
+    <div class="metric-value highlight-amber">{{ metrics.reserved_loans_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Lượt mượn quá hạn</div>
+    <div class="metric-value highlight-red">{{ metrics.overdue_loans_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Báo cáo vi phạm mở</div>
+    <div class="metric-value">{{ metrics.unresolved_reports_count }}</div>
+  </div>
+</div>
+
+<!-- Pending Tasks -->
+{% if metrics.overdue_loans_count > 0 or metrics.unresolved_reports_count > 0 or metrics.pending_proposals > 0 or metrics.pending_outbox > 0 %}
+<div class="data-card" style="margin-bottom: 24px; border-left: 4px solid var(--warning);">
+  <div class="card-header">
+    <h2 class="card-title">Tác vụ cần xử lý</h2>
+  </div>
+  <div style="padding: 16px 24px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      {% if metrics.overdue_loans_count > 0 %}
+      <a href="/admin/loans?overdue=yes" style="text-decoration: none;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; background: #fee2e2; color: #991b1b; font-weight: 600; font-size: 0.85rem;">
+          [Quá hạn] {{ metrics.overdue_loans_count }} sách quá hạn
+        </span>
+      </a>
+      {% endif %}
+      {% if metrics.unresolved_reports_count > 0 %}
+      <a href="/admin/moderation" style="text-decoration: none;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; background: #fef3c7; color: #92400e; font-weight: 600; font-size: 0.85rem;">
+          [Báo cáo] {{ metrics.unresolved_reports_count }} báo cáo chờ xử lý
+        </span>
+      </a>
+      {% endif %}
+      {% if metrics.pending_proposals > 0 %}
+      <a href="/admin/chapter-proposals?status=pending" style="text-decoration: none;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; background: #dbeafe; color: #1e40af; font-weight: 600; font-size: 0.85rem;">
+          [Đề xuất] {{ metrics.pending_proposals }} đề xuất chương chờ duyệt
+        </span>
+      </a>
+      {% endif %}
+      {% if metrics.pending_outbox > 0 %}
+      <a href="/admin/process-audit" style="text-decoration: none;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; background: #f3f4f6; color: #374151; font-weight: 600; font-size: 0.85rem;">
+          [Outbox] {{ metrics.pending_outbox }} sự kiện outbox chờ xử lý
+        </span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Loans -->
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Các lượt mượn gần đây</h2>
+    <a href="/admin/loans" class="btn btn-secondary">Xem toàn bộ</a>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã sách</th>
+          <th>Tên đầu sách</th>
+          <th>Người mượn</th>
+          <th>Chủ sách</th>
+          <th>Trạng thái</th>
+          <th>Hạn trả</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_loans %}
+          {% for l in recent_loans %}
+          <tr>
+            <td><code>{{ l.copy.public_code if l.copy else 'N/A' }}</code></td>
+            <td>
+              {% if l.copy and l.copy.book %}
+                <a href="/admin/books/{{ l.copy.book.id }}" style="color: var(--primary); text-decoration: none;">{{ l.copy.book.title }}</a>
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+            <td>{{ l.borrower.public_alias if l.borrower else 'N/A' }}</td>
+            <td>{{ l.lender.public_alias if l.lender else 'N/A' }}</td>
+            <td><span class="badge badge-{{ l.status }}">{{ l.status }}</span></td>
+            <td>{{ l.due_at.strftime('%d/%m/%Y') if l.due_at else 'Chưa giao' }}</td>
+            <td><a href="/admin/loans/{{ l.id }}" style="color: var(--primary); font-size: 0.85rem; font-weight: 600;">Xem chi tiết</a></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có lượt mượn nào được tạo.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Lượt mượn sách{% endblock %}
+{% block page_title %}Quản trị Giao dịch Mượn & Tranh chấp (Loans){% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success" style="padding: 12px 16px; background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 6px; margin-bottom: 20px;">
+  {{ message }}
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger" style="padding: 12px 16px; background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 20px;">
+  {{ error }}
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div style="padding: 16px 24px;">
+    <form method="GET" action="/admin/loans" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 220px; flex: 1;">
+        <label style="font-size: 0.8rem;">Tìm kiếm</label>
+        <input type="text" name="q" value="{{ search_q }}" placeholder="Tìm theo tên sách, mã bản sách, tên thành viên..." style="height: 38px;">
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+        <label style="font-size: 0.8rem;">Trạng thái</label>
+        <select name="status" style="height: 38px;">
+          <option value="">Tất cả</option>
+          <option value="reserved" {% if current_status == 'reserved' %}selected{% endif %}>Đã giữ chỗ</option>
+          <option value="active" {% if current_status == 'active' %}selected{% endif %}>Đang mượn</option>
+          <option value="return_pending" {% if current_status == 'return_pending' %}selected{% endif %}>Đề nghị trả</option>
+          <option value="returned" {% if current_status == 'returned' %}selected{% endif %}>Đã trả</option>
+          <option value="disputed" {% if current_status == 'disputed' %}selected{% endif %}>Tranh chấp</option>
+          <option value="closed_lost" {% if current_status == 'closed_lost' %}selected{% endif %}>Bị mất sách</option>
+          <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+          <option value="expired" {% if current_status == 'expired' %}selected{% endif %}>Hết hạn</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 130px;">
+        <label style="font-size: 0.8rem;">Quá hạn</label>
+        <select name="overdue" style="height: 38px;">
+          <option value="">Tất cả</option>
+          <option value="yes" {% if overdue_filter == 'yes' %}selected{% endif %}>Quá hạn</option>
+          <option value="no" {% if overdue_filter == 'no' %}selected{% endif %}>Trong hạn</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="height: 38px;">Lọc danh sách</button>
+      <a href="/admin/loans" class="btn btn-secondary" style="height: 38px;">Xóa lọc</a>
+    </form>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 class="card-title">Tất cả lượt mượn ({{ loans|length }})</h2>
+    <a href="/admin/moderation" class="btn btn-secondary" style="font-size: 0.85rem;">Quản lý tranh chấp chuyên sâu</a>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã sách</th>
+          <th>Tên sách</th>
+          <th>Người mượn</th>
+          <th>Chủ sách</th>
+          <th>Trạng thái</th>
+          <th>Ngày nhận</th>
+          <th>Hạn trả</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if loans %}
+          {% for l in loans %}
+          <tr>
+            <td><code>{{ l.copy.public_code if l.copy else 'N/A' }}</code></td>
+            <td>
+              {% if l.copy and l.copy.book %}
+                <a href="/admin/books/{{ l.copy.book.id }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">{{ l.copy.book.title }}</a>
+                {% if l.copy.is_partial %}
+                  <span class="badge badge-info" style="margin-left: 4px; font-size: 0.7rem;">1 phần</span>
+                {% endif %}
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+            <td>
+              <a href="/admin/users/{{ l.borrower_id }}" style="color: var(--primary); text-decoration: none;">
+                {{ l.borrower.public_alias if l.borrower else 'N/A' }}
+              </a>
+            </td>
+            <td>
+              <a href="/admin/users/{{ l.lender_id }}" style="color: var(--primary); text-decoration: none;">
+                {{ l.lender.public_alias if l.lender else 'N/A' }}
+              </a>
+            </td>
+            <td>
+              <span class="badge badge-{{ l.status }}">{{ l.status }}</span>
+              {% if l.is_overdue %}
+                <span class="badge badge-overdue" style="margin-left: 4px;">QUÁ HẠN</span>
+              {% endif %}
+            </td>
+            <td>{{ l.handed_over_at.strftime('%d/%m/%Y %H:%M') if l.handed_over_at else 'Chưa giao' }}</td>
+            <td>{{ l.due_at.strftime('%d/%m/%Y') if l.due_at else '—' }}</td>
+            <td>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <a href="/admin/loans/{{ l.id }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Chi tiết</a>
+                {% if l.status == 'disputed' %}
+                  <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="showDisputeModal('{{ l.id }}', {{ (l.copy.book.title if l.copy and l.copy.book else l.id)|tojson }})">
+                    Xử lý
+                  </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              {% if current_status or overdue_filter or search_q %}
+                Không tìm thấy giao dịch mượn nào khớp bộ lọc. <a href="/admin/loans" style="color: var(--primary);">Xóa bộ lọc</a>
+              {% else %}
+                Chưa có lượt mượn nào trong hệ thống.
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Form Xử lý tranh chấp (Không emoji) -->
+<div id="disputeModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 8px; width: 480px; max-width: 90%; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <h3 style="margin-top: 0; font-size: 1.15rem; font-weight: 600;">Giải quyết Tranh chấp Giao dịch</h3>
+    <p id="disputeBookTitle" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;"></p>
+    <form id="disputeForm" method="POST" action="">
+      <input type="hidden" name="redirect_to" value="/admin/loans">
+      <div class="form-group">
+        <label>Phán quyết giải quyết</label>
+        <select name="resolution" required style="width: 100%; height: 38px;">
+          <option value="returned">Xác nhận đã trả sách (Hoàn tất giao dịch, mở lại sách)</option>
+          <option value="closed_lost">Xác nhận mất sách (Ghi nhận mất sách, xử lý bồi thường)</option>
+          <option value="active">Bác bỏ tranh chấp (Duy trì trạng thái đang mượn)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Căn cứ / Lý do kết luận</label>
+        <textarea name="reason" rows="3" required style="width: 100%; padding: 8px;" placeholder="Ví dụ: Đã kiểm tra đối chiếu qua tin nhắn xác nhận người mượn đã gửi lại sách..."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="closeDisputeModal()">Hủy</button>
+        <button type="submit" class="btn btn-primary">Xác nhận phán quyết</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showDisputeModal(loanId, title) {
+    document.getElementById("disputeForm").action = "/admin/loans/" + loanId + "/resolve";
+    document.getElementById("disputeBookTitle").innerText = "Đầu sách: " + title;
+    document.getElementById("disputeModal").style.display = "flex";
+  }
+  function closeDisputeModal() {
+    document.getElementById("disputeModal").style.display = "none";
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Thống kê & Vận hành Jobs{% endblock %}
+{% block page_title %}Báo cáo Thống kê & Giám sát Vận hành{% endblock %}
+
+{% block content %}
+<div class="stats-grid" style="margin-bottom: 2rem;">
+  <div class="stat-card">
+    <div class="stat-value" style="color: #0284c7;">{{ stats.total_needs }}</div>
+    <div class="stat-label">Tổng nhu cầu sách</div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">Đang mở: {{ stats.open_needs }} | Hoàn tất: {{ stats.fulfilled_needs }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-value" style="color: #10b981;">{{ stats.total_offers }}</div>
+    <div class="stat-label">Đề nghị hỗ trợ từ cộng đồng</div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">Được chọn: {{ stats.selected_offers }} | Tỷ lệ chọn: {{ stats.selection_rate }}%</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-value" style="color: #6366f1;">{{ stats.matched_owners_count }}</div>
+    <div class="stat-label">Chủ sách đủ điều kiện đã quét</div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">Đã gửi thông báo: {{ stats.notified_count }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-value" style="color: #f59e0b;">{{ stats.active_loans }}</div>
+    <div class="stat-label">Lượt mượn đang diễn ra</div>
+    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">Quá hạn: {{ stats.overdue_loans }}</div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+  <div class="card">
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Phân định Trạng thái Nhu cầu (State Funnel)</h2>
+    <div style="font-size: 0.875rem; color: #475569; line-height: 2;">
+      • <strong>Need Created:</strong> Người dùng tạo nhu cầu tìm sách.<br>
+      • <strong>Matched Owners:</strong> Chủ sách có copy khả dụng, thỏa mãn điều kiện và cài đặt nhận thông báo.<br>
+      • <strong>Offer Proposed:</strong> Chủ sách gửi đề nghị đáp ứng bằng copy cụ thể.<br>
+      • <strong>Offer Selected:</strong> Người cần chọn đề nghị -&gt; Bản sách được <strong>giữ chỗ (Reserved)</strong> trong 72h.<br>
+      • <strong>Confirmed Handover:</strong> Cả 2 bên xác nhận giao nhận trực tiếp -&gt; Loan Active.<br>
+      • <strong>Need Fulfilled:</strong> Nhu cầu chỉ hoàn tất khi giao nhận thành công hoặc tiếp cận nguồn hợp lệ!
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Chỉ số An toàn & Bản quyền</h2>
+    <div style="font-size: 0.875rem; color: #475569; line-height: 2;">
+      • Tổng số cảnh báo người dùng: <strong>{{ stats.total_warnings }}</strong><br>
+      • Cảnh báo về quyền tài liệu (Rights Review): <strong>{{ stats.rights_warnings }}</strong><br>
+      • Khiếu nại đang chờ xử lý: <strong>{{ stats.pending_appeals }}</strong><br>
+      • Authorized Collections hoạt động: <strong>{{ stats.active_collections }}</strong><br>
+      • Tiến độ hoàn tất giao dịch: <strong>{{ stats.fulfillment_rate }}%</strong>
+    </div>
+  </div>
+</div>
+{% endblock %}

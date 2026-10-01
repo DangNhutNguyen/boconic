@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Tranh chấp & Báo cáo{% endblock %}
+{% block page_title %}Quản lý Tranh chấp Giao dịch, Báo cáo & Cảnh báo{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success" style="padding: 12px 16px; background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 6px; margin-bottom: 20px;">
+  {{ message }}
+</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger" style="padding: 12px 16px; background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 20px;">
+  {{ error }}
+</div>
+{% endif %}
+
+<!-- Section 1: Tranh chấp lượt mượn (Disputed Loans) -->
+<div class="data-card" style="margin-bottom: 28px;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2 class="card-title">Tranh chấp Lượt mượn Đang chờ xử lý</h2>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Các trường hợp mâu thuẫn về bàn giao hoặc trả sách giữa người mượn và chủ sách.</div>
+    </div>
+    <span class="badge {% if disputed_loans %}badge-disputed{% else %}badge-available{% endif %}">
+      {{ disputed_loans|length }} vụ tranh chấp
+    </span>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã sách</th>
+          <th>Tên sách</th>
+          <th>Người mượn</th>
+          <th>Chủ sách</th>
+          <th>Hạn trả</th>
+          <th>Ngày cập nhật</th>
+          <th>Xử lý phán quyết</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if disputed_loans %}
+          {% for l in disputed_loans %}
+          <tr>
+            <td><code>{{ l.copy.public_code if l.copy else 'N/A' }}</code></td>
+            <td>
+              {% if l.copy and l.copy.book %}
+                <a href="/admin/books/{{ l.copy.book.id }}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                  {{ l.copy.book.title }}
+                </a>
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+            <td>
+              <a href="/admin/users/{{ l.borrower_id }}" style="color: var(--primary); text-decoration: none;">
+                {{ l.borrower.public_alias if l.borrower else l.borrower_id }}
+              </a>
+            </td>
+            <td>
+              <a href="/admin/users/{{ l.lender_id }}" style="color: var(--primary); text-decoration: none;">
+                {{ l.lender.public_alias if l.lender else l.lender_id }}
+              </a>
+            </td>
+            <td>{{ l.due_at.strftime('%d/%m/%Y') if l.due_at else '—' }}</td>
+            <td>{{ l.updated_at.strftime('%d/%m/%Y %H:%M') if l.updated_at else '—' }}</td>
+            <td>
+              <form action="/admin/loans/{{ l.id }}/resolve" method="POST" style="display: flex; gap: 6px; align-items: center;">
+                <input type="hidden" name="redirect_to" value="/admin/moderation">
+                <select name="resolution" required style="font-size: 0.8rem; padding: 4px 6px; height: 32px;">
+                  <option value="returned">Đã trả sách</option>
+                  <option value="closed_lost">Mất sách</option>
+                  <option value="active">Bác bỏ (Tiếp tục mượn)</option>
+                </select>
+                <input type="text" name="reason" placeholder="Căn cứ giải quyết..." required style="font-size: 0.8rem; padding: 4px 8px; height: 32px; width: 160px;">
+                <button type="submit" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem; height: 32px;">Giải quyết</button>
+                <a href="/admin/loans/{{ l.id }}" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; height: 32px; text-decoration: none; display: inline-flex; align-items: center;">Chi tiết</a>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">
+              Hiện không có lượt mượn nào ở trạng thái tranh chấp.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 2: Báo cáo vi phạm từ cộng đồng (User Reports) -->
+<div class="data-card" style="margin-bottom: 28px;">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h2 class="card-title">Báo cáo Vi phạm từ Người dùng (Reports)</h2>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Tố cáo nội dung vi phạm bản quyền, thông tin sai lệch, mất sách hoặc hành vi ứng xử.</div>
+    </div>
+    <span class="badge" style="background: #3b82f6; color: white;">{{ reports|length }} báo cáo</span>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Người báo cáo</th>
+          <th>Phân loại</th>
+          <th>Đối tượng</th>
+          <th>Nội dung phản ánh</th>
+          <th>Trạng thái</th>
+          <th>Ghi chú xử lý</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if reports %}
+          {% for r in reports %}
+          <tr>
+            <td>
+              <strong>{{ r.reporter.public_alias if r.reporter else r.reporter_id }}</strong>
+            </td>
+            <td><code>{{ r.category }}</code></td>
+            <td>
+              <span class="badge badge-info" style="font-size: 0.75rem;">{{ r.target_entity_type }}</span>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ (r.target_entity_id or '')[:8] }}...</div>
+            </td>
+            <td style="max-width: 280px;">
+              <div style="font-size: 0.85rem;">{{ r.description }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Gửi lúc: {{ r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '—' }}</div>
+            </td>
+            <td>
+              {% if r.status == 'open' %}
+                <span class="badge badge-danger">Chờ xử lý</span>
+              {% elif r.status == 'reviewing' %}
+                <span class="badge badge-warning">Đang xác minh</span>
+              {% elif r.status == 'resolved' %}
+                <span class="badge badge-success">Đã giải quyết</span>
+              {% elif r.status == 'rejected' %}
+                <span class="badge badge-secondary">Đã bác bỏ</span>
+              {% else %}
+                <span class="badge">{{ r.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="font-size: 0.8rem; color: #475569;">{{ r.resolution_note or 'Chưa có ghi chú' }}</div>
+              {% if r.resolved_at %}
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ r.resolved_at.strftime('%d/%m/%Y') }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <form action="/admin/reports/{{ r.id }}/resolve" method="POST" style="display: flex; gap: 4px; align-items: center;">
+                <select name="status" style="font-size: 0.75rem; padding: 2px 4px; height: 28px;">
+                  <option value="resolved" {% if r.status == 'resolved' %}selected{% endif %}>Giải quyết</option>
+                  <option value="reviewing" {% if r.status == 'reviewing' %}selected{% endif %}>Đang xem</option>
+                  <option value="rejected" {% if r.status == 'rejected' %}selected{% endif %}>Bác bỏ</option>
+                </select>
+                <input type="text" name="resolution_note" value="{{ r.resolution_note or '' }}" placeholder="Ghi chú..." style="font-size: 0.75rem; padding: 2px 6px; height: 28px; width: 110px;">
+                <button type="submit" class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.75rem; height: 28px;">Lưu</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">
+              Chưa có báo cáo vi phạm nào được gửi từ người dùng.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 3: Cảnh báo người dùng & Khiếu nại (User Warnings & Appeals) -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Warnings List -->
+  <div class="data-card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 class="card-title">Cảnh báo Người dùng & Khiếu nại (Appeals)</h2>
+      <span class="badge" style="background: #ef4444; color: white;">{{ warnings|length }} cảnh báo</span>
+    </div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Người dùng</th>
+            <th>Phân loại</th>
+            <th>Mức độ</th>
+            <th>Nội dung / Lý do</th>
+            <th>Khiếu nại (Appeal)</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w, user_alias in warnings %}
+          <tr>
+            <td><strong>{{ user_alias }}</strong></td>
+            <td><code>{{ w.category }}</code></td>
+            <td>
+              {% if w.severity == 'critical' %}
+              <span class="badge badge-danger">Nghiêm trọng</span>
+              {% elif w.severity == 'warning' %}
+              <span class="badge badge-warning">Cảnh báo</span>
+              {% else %}
+              <span class="badge badge-info">Nhắc nhở</span>
+              {% endif %}
+            </td>
+            <td>
+              <div>{{ w.message }}</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Lý do: {{ w.reason }}</div>
+            </td>
+            <td>
+              {% if w.appeal_status == 'pending' %}
+              <span class="badge badge-warning">Đang khiếu nại</span>
+              <div style="font-size: 0.75rem; color: #b45309; margin-top: 2px;">"{{ w.appeal_note }}"</div>
+              {% elif w.appeal_status == 'accepted' %}
+              <span class="badge badge-success">Chấp thuận</span>
+              {% elif w.appeal_status == 'rejected' %}
+              <span class="badge badge-danger">Bác bỏ</span>
+              {% else %}
+              <span style="color: #94a3b8; font-size: 0.75rem;">Không</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if w.appeal_status == 'pending' %}
+              <div style="display: flex; gap: 4px;">
+                <form action="/admin/warnings/{{ w.id }}/appeal/accept" method="POST" style="display: inline;">
+                  <button type="submit" class="btn btn-primary" style="padding: 2px 6px; font-size: 0.75rem;">Duyệt</button>
+                </form>
+                <form action="/admin/warnings/{{ w.id }}/appeal/reject" method="POST" style="display: inline;">
+                  <button type="submit" class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;">Bác</button>
+                </form>
+              </div>
+              {% else %}
+              <span style="font-size: 0.75rem; color: #94a3b8;">Hoàn tất</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 2rem;">
+              Không có cảnh báo nào trong hệ thống.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Issue Warning Form -->
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title">Phát hành Cảnh báo Minh bạch</h2>
+    </div>
+    <div style="padding: 16px 20px;">
+      <form action="/admin/warnings/issue" method="POST">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.8rem;">ID Người dùng:</label>
+          <input type="text" name="user_id" required style="width: 100%; height: 36px;" placeholder="UUID người dùng">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.8rem;">Phân loại vi phạm:</label>
+          <select name="category" style="width: 100%; height: 36px;">
+            <option value="rights_review">Quyền tài liệu (Rights Review)</option>
+            <option value="validation">Dữ liệu / Trang không hợp lệ (Validation)</option>
+            <option value="transaction_reminder">Nhắc nhở giao dịch (Transaction Reminder)</option>
+            <option value="conduct_warning">Hành vi ứng xử (Conduct Warning)</option>
+            <option value="copyright_concern">Lo ngại bản quyền (Copyright Concern)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.8rem;">Mức độ cảnh báo:</label>
+          <select name="severity" style="width: 100%; height: 36px;">
+            <option value="info">Thông tin / Nhắc nhở (Info)</option>
+            <option value="warning">Cảnh báo (Warning)</option>
+            <option value="critical">Nghiêm trọng (Critical)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.8rem;">Thông điệp gửi người dùng:</label>
+          <textarea name="message" rows="3" required style="width: 100%; padding: 8px; font-size: 0.85rem;" placeholder="Mô tả cụ thể thông điệp gửi thành viên..."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-size: 0.8rem;">Lý do / Căn cứ quy định:</label>
+          <input type="text" name="reason" required style="width: 100%; height: 36px;" placeholder="Ví dụ: Quy chế mượn trả Mục 4 Boconic">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; height: 38px;">Phát hành cảnh báo</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

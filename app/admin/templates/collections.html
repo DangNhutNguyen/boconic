@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Authorized Collections{% endblock %}
+{% block page_title %}Authorized Contribution Collections & Pipeline Tổng hợp{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div style="font-size: 0.875rem; color: #475569; line-height: 1.5;">
+    Pipeline tiếp nhận đóng góp nhiều nguồn và tổng hợp tài nguyên học tập có bản quyền rõ ràng (Open License / Public Domain / Tác giả cho phép).
+    Hệ thống tính toán <strong>Interval Union</strong> chính xác toán học, phát hiện khoảng trùng lặp (Overlap) và khoảng trống (Gaps).
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+  <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Danh sách Bộ sưu tập được phép thu thập</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Mã ID</th>
+        <th>Tiêu đề / Đầu sách</th>
+        <th>Cơ sở quyền (Rights Basis)</th>
+        <th>Hành động được phép</th>
+        <th>Phạm vi mục tiêu</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for col, book in collections %}
+      <tr>
+        <td><code>{{ col.id[:8] }}...</code></td>
+        <td>
+          <strong>{{ col.title }}</strong>
+          <div style="font-size: 0.75rem; color: #64748b;">{{ book.title }}</div>
+        </td>
+        <td><span class="badge" style="background: #e0f2fe; color: #0369a1;">{{ col.rights_basis }}</span></td>
+        <td>{{ col.allowed_actions|join(', ') }}</td>
+        <td>
+          {% if col.target_scope %}
+          Trang {{ col.target_scope.get('start_page', 1) }} – {{ col.target_scope.get('end_page', 100) }}
+          {% else %}
+          Toàn bộ sách
+          {% endif %}
+        </td>
+        <td>
+          {% if col.status == 'active' %}
+          <span class="badge badge-success">Đang hoạt động</span>
+          {% elif col.status == 'revoked' %}
+          <span class="badge badge-danger">Đã thu hồi</span>
+          {% else %}
+          <span class="badge badge-warning">{{ col.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/admin/collections/{{ col.id }}/preview" class="btn btn-sm btn-secondary">Xem Coverage</a>
+          {% if col.status == 'active' %}
+          <form action="/admin/collections/{{ col.id }}/assemble" method="POST" style="display: inline; margin-left: 4px;">
+            <button type="submit" class="btn btn-sm btn-primary">Tổng hợp (Assemble)</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align: center; color: #94a3b8; padding: 2rem;">
+          Chưa có Authorized Collection nào được tạo.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

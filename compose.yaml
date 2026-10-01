@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boconic-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: boconic
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-boconic_secure_pw}
+      POSTGRES_DB: boconic
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boconic -d boconic"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  boconic-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boconic-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - storage_data:/data/storage
+      - backup_data:/data/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "python scripts/setup.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  boconic-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boconic-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      boconic-api:
+        condition: service_healthy
+    command: ["python", "-m", "app.bot.main"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  boconic-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boconic-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - storage_data:/data/storage
+      - backup_data:/data/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "app.jobs.worker"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  postgres_data:
+  storage_data:
+  backup_data:

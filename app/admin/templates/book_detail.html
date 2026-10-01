@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} — Chi tiết{% endblock %}
+{% block page_title %}Chi tiết đầu sách{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/books" style="color: var(--primary); text-decoration: none;">Đầu sách</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>{{ book.title }}</span>
+</div>
+
+<!-- Book Header Card -->
+<div class="data-card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 4px;">{{ book.title }}</h2>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        ID: <code>{{ book.id[:12] }}...</code>
+        {% if book.isbn13 %} | ISBN-13: <code>{{ book.isbn13 }}</code>{% endif %}
+        {% if book.verification_status %}
+        | <span class="badge badge-{{ book.verification_status }}">{{ book.verification_status }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="/admin/books/{{ book.id }}/copies/add" class="btn btn-primary">Thêm bản vật lý</a>
+      <a href="/admin/books/{{ book.id }}/edit" class="btn btn-secondary">Sửa thông tin</a>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div style="display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border);">
+  <button class="tab-btn active" onclick="switchTab('info')" id="tab-info">Thông tin chung</button>
+  <button class="tab-btn" onclick="switchTab('copies')" id="tab-copies">Bản sách ({{ copies|length }})</button>
+  <button class="tab-btn" onclick="switchTab('chapters')" id="tab-chapters">Cấu trúc chương ({{ chapters|length }})</button>
+  <button class="tab-btn" onclick="switchTab('requests')" id="tab-requests">Nhu cầu liên quan</button>
+</div>
+
+<!-- TAB: Info -->
+<div id="panel-info" class="tab-panel">
+  <div class="data-card">
+    <div style="padding: 24px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div>
+          <div class="detail-row">
+            <span class="detail-label">Tiêu đề</span>
+            <span class="detail-value">{{ book.title }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Tác giả</span>
+            <span class="detail-value">
+              {% for ba in book.authors %}
+                {{ ba.author.name }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+              {% if not book.authors %}—{% endif %}
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Nhà xuất bản</span>
+            <span class="detail-value">{{ book.publisher or '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Năm xuất bản</span>
+            <span class="detail-value">{{ book.publication_year or '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Phiên bản</span>
+            <span class="detail-value">{{ book.edition_label or '—' }}</span>
+          </div>
+        </div>
+        <div>
+          <div class="detail-row">
+            <span class="detail-label">Môn học</span>
+            <span class="detail-value">{{ book.subject or '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Khối lớp</span>
+            <span class="detail-value">{% if book.grade_level %}Lớp {{ book.grade_level }}{% else %}—{% endif %}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Bộ sách / Chương trình</span>
+            <span class="detail-value">{{ book.curriculum or '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">ISBN-10</span>
+            <span class="detail-value"><code>{{ book.isbn10 or 'Không có' }}</code></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">ISBN-13</span>
+            <span class="detail-value"><code>{{ book.isbn13 or 'Không có' }}</code></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Ngôn ngữ</span>
+            <span class="detail-value">{{ book.language or 'vi' }}</span>
+          </div>
+        </div>
+      </div>
+      {% if book.description %}
+      <div class="detail-row" style="margin-top: 16px;">
+        <span class="detail-label">Mô tả</span>
+        <span class="detail-value">{{ book.description }}</span>
+      </div>
+      {% endif %}
+      {% if book.custom_data and book.custom_data|length > 0 %}
+      <div style="border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px;">
+        <span class="detail-label" style="margin-bottom: 8px;">Custom Fields</span>
+        {% for k, v in book.custom_data.items() %}
+        <div class="detail-row">
+          <span class="detail-label">{{ k }}</span>
+          <span class="detail-value">{{ v }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Summary Metrics -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <span class="metric-label">Tổng bản sách</span>
+      <span class="metric-value highlight-teal">{{ copies|length }}</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Đang khả dụng</span>
+      <span class="metric-value" style="color: var(--success);">{{ copies|selectattr('circulation_status', 'equalto', 'available')|list|length }}</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Đang cho mượn</span>
+      <span class="metric-value highlight-amber">{{ copies|selectattr('circulation_status', 'in', ['on_loan', 'reserved', 'active'])|list|length }}</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Số chương</span>
+      <span class="metric-value">{{ chapters|length }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: Copies -->
+<div id="panel-copies" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title">Bản sách vật lý ({{ copies|length }})</h2>
+      <a href="/admin/books/{{ book.id }}/copies/add" class="btn btn-primary">Thêm bản vật lý</a>
+    </div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã bản</th>
+            <th>Chủ sở hữu</th>
+            <th>Người đang giữ</th>
+            <th>Tình trạng</th>
+            <th>Lưu thông</th>
+            <th>Loại</th>
+            <th>Thời hạn tối đa</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if copies %}
+            {% for c in copies %}
+            <tr>
+              <td>
+                <code>{{ c.public_code }}</code>
+                {% if c.barcode and c.barcode != c.public_code %}
+                <br><small style="color: var(--text-muted); font-family: monospace;">{{ c.barcode }}</small>
+                {% endif %}
+              </td>
+              <td>{{ c.owner.public_alias if c.owner else 'N/A' }}</td>
+              <td>{{ c.current_holder.public_alias if c.current_holder else 'N/A' }}</td>
+              <td>
+                <span class="badge" style="background-color: #f0fdf4; color: #166534;">{{ c.condition }}</span>
+              </td>
+              <td>
+                <span class="badge badge-{{ c.circulation_status }}">{{ c.circulation_status }}</span>
+              </td>
+              <td>{{ c.format or 'physical' }}{% if c.is_partial %} <span style="color: var(--warning);">(bản 1 phần)</span>{% endif %}</td>
+              <td>{{ c.maximum_loan_days }} ngày</td>
+              <td>
+                <a href="/admin/copies/{{ c.id }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Chi tiết</a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                Chưa có bản sách vật lý nào. <a href="/admin/books/{{ book.id }}/copies/add" style="color: var(--primary);">Thêm bản đầu tiên</a>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: Chapters -->
+<div id="panel-chapters" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title">Cấu trúc chương ({{ chapters|length }})</h2>
+      <a href="/admin/books/{{ book.id }}/chapters/add" class="btn btn-primary">Thêm chương</a>
+    </div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Mã chương</th>
+            <th>Tiêu đề</th>
+            <th>Khoảng trang</th>
+            <th>Trạng thái</th>
+            <th>Nguồn</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if chapters %}
+            {% for ch in chapters %}
+            <tr>
+              <td>{{ ch.order_index }}</td>
+              <td><code>{{ ch.chapter_code or ch.chapter_number }}</code></td>
+              <td><strong>{{ ch.title }}</strong></td>
+              <td>{% if ch.page_start %}{{ ch.page_start }}–{{ ch.page_end }}{% else %}—{% endif %}</td>
+              <td><span class="badge badge-{{ ch.verification_status or 'unverified' }}">{{ ch.verification_status or 'unverified' }}</span></td>
+              <td>{{ ch.source or '—' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                Chưa có cấu trúc chương. <a href="/admin/books/{{ book.id }}/chapters/add" style="color: var(--primary);">Thêm chương đầu tiên</a>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: Requests -->
+<div id="panel-requests" class="tab-panel" style="display: none;">
+  <div class="data-card">
+    <div class="card-header">
+      <h2 class="card-title">Nhu cầu liên quan</h2>
+    </div>
+    <div style="padding: 24px;">
+      {% if needs %}
+        {% for n in needs %}
+        <div style="padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px;">
+          <strong>{{ n.title }}</strong>
+          <span class="badge badge-{{ n.status }}" style="margin-left: 8px;">{{ n.status }}</span>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+            Phạm vi: {{ n.scope_type or 'full_book' }} | Số lượng: {{ n.quantity or 1 }}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 24px;">
+          Chưa có nhu cầu nào liên quan đến đầu sách này.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s ease;
+}
+.tab-btn:hover { color: var(--text-main); }
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.detail-row {
+  margin-bottom: 12px;
+}
+.detail-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.detail-value {
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+</style>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).style.display = 'block';
+  document.getElementById('tab-' + name).classList.add('active');
+}
+</script>
+{% endblock %}

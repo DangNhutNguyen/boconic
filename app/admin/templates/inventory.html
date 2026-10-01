@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Kho & Thư viện cá nhân{% endblock %}
+{% block page_title %}Quản lý Kho sách & Thư viện thành viên{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="/admin/inventory" class="btn {% if not current_vis and not current_format %}btn-primary{% else %}btn-secondary{% endif %}">Tất cả</a>
+      <a href="/admin/inventory?visibility=published" class="btn {% if current_vis == 'published' %}btn-primary{% else %}btn-secondary{% endif %}">Công khai (Lending)</a>
+      <a href="/admin/inventory?visibility=private" class="btn {% if current_vis == 'private' %}btn-primary{% else %}btn-secondary{% endif %}">Riêng tư</a>
+      <a href="/admin/inventory?format=partial_photocopy" class="btn {% if current_format == 'partial_photocopy' %}btn-primary{% else %}btn-secondary{% endif %}">Photocopy / 1 phần</a>
+    </div>
+    <div>
+      <span class="badge" style="background: #6366f1; color: white;">Tổng số: {{ copies|length }} bản lưu trữ</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Mã Barcode / Code</th>
+        <th>Đầu sách</th>
+        <th>Định dạng</th>
+        <th>Chủ sở hữu</th>
+        <th>Người giữ hiện tại</th>
+        <th>Tình trạng</th>
+        <th>Lưu thông</th>
+        <th>Hiển thị</th>
+        <th>Khả dụng từ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for copy, book, owner_alias, holder_alias in copies %}
+      <tr>
+        <td><code>{{ copy.barcode or copy.public_code }}</code></td>
+        <td>
+          <div style="font-weight: 600;">{{ book.title }}</div>
+          {% if book.isbn13 %}
+          <div style="font-size: 0.75rem; color: #64748b;">ISBN: {{ book.isbn13 }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if copy.is_partial %}
+          <span class="badge" style="background: #fef3c7; color: #92400e;">1 phần / Photo</span>
+          {% else %}
+          <span class="badge" style="background: #e0e7ff; color: #3730a3;">{{ copy.format }}</span>
+          {% endif %}
+        </td>
+        <td>{{ owner_alias }}</td>
+        <td>{{ holder_alias }}</td>
+        <td>{{ copy.condition }}</td>
+        <td>
+          {% if copy.circulation_status == 'available' %}
+          <span class="badge badge-success">Sẵn sàng</span>
+          {% elif copy.circulation_status == 'loaned' %}
+          <span class="badge badge-warning">Đang mượn</span>
+          {% elif copy.circulation_status == 'reserved' %}
+          <span class="badge badge-info">Giữ chỗ</span>
+          {% else %}
+          <span class="badge badge-secondary">{{ copy.circulation_status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if copy.visibility == 'published' %}
+          <span class="badge badge-success">Công khai</span>
+          {% else %}
+          <span class="badge badge-secondary">Riêng tư</span>
+          {% endif %}
+        </td>
+        <td>
+          {{ copy.available_from.strftime('%d/%m/%Y') if copy.available_from else 'Ngay lập tức' }}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" style="text-align: center; color: #94a3b8; padding: 2rem;">
+          Không có bản lưu trữ nào trong danh mục này.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

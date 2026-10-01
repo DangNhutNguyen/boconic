@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Chi tiết giao dịch mượn{% endblock %}
+{% block page_title %}Chi tiết giao dịch mượn{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/loans" style="color: var(--primary); text-decoration: none;">Giao dịch mượn</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>{{ loan.id[:12] }}...</span>
+</div>
+
+<!-- Status Header -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 4px;">
+        Giao dịch <code>{{ loan.id[:12] }}...</code>
+        <span class="badge badge-{{ loan.status }}" style="margin-left: 8px; font-size: 0.85rem;">{{ loan.status }}</span>
+        {% if is_overdue %}
+          <span class="badge badge-overdue" style="margin-left: 4px;">QUÁ HẠN</span>
+        {% endif %}
+      </h2>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Bản sách: <a href="/admin/copies/{{ loan.copy_id }}" style="color: var(--primary);">{{ loan.copy.public_code if loan.copy else 'N/A' }}</a>
+        | Sách: <a href="/admin/books/{{ loan.copy.book_id }}" style="color: var(--primary);">{{ loan.copy.book.title if loan.copy and loan.copy.book else 'N/A' }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Parties & Dates -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <div class="data-card">
+    <div class="card-header"><h2 class="card-title" style="font-size: 0.95rem;">Bên tham gia</h2></div>
+    <div style="padding: 20px;">
+      <div class="detail-row">
+        <span class="detail-label">Người cho mượn (Lender)</span>
+        <span class="detail-value"><a href="/admin/users/{{ loan.lender_id }}" style="color: var(--primary);">{{ loan.lender.display_name if loan.lender else 'N/A' }} ({{ loan.lender.public_alias if loan.lender else 'N/A' }})</a></span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Người mượn (Borrower)</span>
+        <span class="detail-value"><a href="/admin/users/{{ loan.borrower_id }}" style="color: var(--primary);">{{ loan.borrower.display_name if loan.borrower else 'N/A' }} ({{ loan.borrower.public_alias if loan.borrower else 'N/A' }})</a></span>
+      </div>
+    </div>
+  </div>
+  <div class="data-card">
+    <div class="card-header"><h2 class="card-title" style="font-size: 0.95rem;">Mốc thời gian</h2></div>
+    <div style="padding: 20px;">
+      <div class="detail-row">
+        <span class="detail-label">Ngày tạo</span>
+        <span class="detail-value">{{ loan.created_at.strftime('%d/%m/%Y %H:%M') if loan.created_at else '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Hết hạn giữ chỗ</span>
+        <span class="detail-value">{{ loan.reservation_expires_at.strftime('%d/%m/%Y %H:%M') if loan.reservation_expires_at else '—' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Ngày giao sách</span>
+        <span class="detail-value">{{ loan.handed_over_at.strftime('%d/%m/%Y %H:%M') if loan.handed_over_at else 'Chưa giao' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Hạn trả</span>
+        <span class="detail-value" style="{% if is_overdue %}color: var(--danger); font-weight: 700;{% endif %}">
+          {{ loan.due_at.strftime('%d/%m/%Y') if loan.due_at else '—' }}
+          {% if is_overdue %} (QUÁ HẠN){% endif %}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Ngày trả</span>
+        <span class="detail-value">{{ loan.returned_at.strftime('%d/%m/%Y %H:%M') if loan.returned_at else '—' }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmations -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title" style="font-size: 0.95rem;">Xác nhận giao/nhận</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Người xác nhận</th>
+          <th>Vai trò</th>
+          <th>Hành động</th>
+          <th>Thời điểm</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if confirmations %}
+          {% for c in confirmations %}
+          <tr>
+            <td>{{ c.actor.public_alias if c.actor else 'N/A' }}</td>
+            <td><span class="badge badge-{{ c.role }}">{{ c.role }}</span></td>
+            <td>{{ c.action }}</td>
+            <td>{{ c.confirmed_at.strftime('%d/%m/%Y %H:%M') if c.confirmed_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">Chưa có xác nhận nào.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Event Timeline -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2 class="card-title" style="font-size: 0.95rem;">Timeline sự kiện</h2>
+  </div>
+  <div style="padding: 20px;">
+    {% if events %}
+      {% for ev in events %}
+      <div style="display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border);">
+        <div style="min-width: 120px; font-size: 0.8rem; color: var(--text-muted);">
+          {{ ev.created_at.strftime('%d/%m/%Y %H:%M') if ev.created_at else '' }}
+        </div>
+        <div>
+          <span class="badge badge-{{ ev.to_status }}" style="font-size: 0.75rem;">{{ ev.from_status or '—' }} → {{ ev.to_status }}</span>
+          <strong style="margin-left: 8px;">{{ ev.action }}</strong>
+          {% if ev.reason %}
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">{{ ev.reason }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align: center; color: var(--text-muted); padding: 16px;">Chưa có sự kiện nào.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Admin Actions -->
+{% if loan.status in ['active', 'return_pending', 'disputed', 'reserved'] %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title" style="font-size: 0.95rem;">Hành động quản trị</h2>
+  </div>
+  <div style="padding: 20px;">
+    {% if loan.status == 'disputed' %}
+    <form action="/admin/loans/{{ loan.id }}/resolve" method="POST" style="margin-bottom: 16px;">
+      <h3 style="font-size: 0.9rem; margin-bottom: 8px;">Xử lý tranh chấp</h3>
+      <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
+          <label>Kết luận</label>
+          <select name="resolution" required>
+            <option value="returned">Đã trả (returned)</option>
+            <option value="closed_lost">Mất sách (closed_lost)</option>
+            <option value="active">Tiếp tục mượn (active)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+          <label>Lý do / Căn cứ *</label>
+          <input type="text" name="reason" required placeholder="Nhập lý do xử lý tranh chấp">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 38px;">Xử lý</button>
+      </div>
+    </form>
+    {% endif %}
+
+    {% if loan.status in ['active', 'return_pending'] %}
+    <form action="/admin/loans/{{ loan.id }}/force-return" method="POST">
+      <h3 style="font-size: 0.9rem; margin-bottom: 8px;">Cưỡng chế hoàn tất</h3>
+      <div style="display: flex; gap: 12px; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+          <label>Ghi chú cưỡng chế *</label>
+          <input type="text" name="resolution_notes" required placeholder="Lý do admin xử lý cưỡng chế trả sách">
+        </div>
+        <button type="submit" class="btn btn-secondary" style="height: 38px; border-color: var(--danger); color: var(--danger);">Cưỡng chế trả</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<style>
+.detail-row { margin-bottom: 12px; }
+.detail-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+.detail-value { font-size: 0.95rem; color: var(--text-main); }
+.badge-lender { background-color: #dbeafe; color: #1e40af; }
+.badge-borrower { background-color: #fef3c7; color: #92400e; }
+.badge-return_pending { background-color: #fef3c7; color: #92400e; }
+.badge-cancelled { background-color: #f3f4f6; color: #374151; }
+.badge-expired { background-color: #f3f4f6; color: #374151; }
+.badge-closed_lost { background-color: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

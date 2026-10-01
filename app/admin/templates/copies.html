@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Bản sách vật lý{% endblock %}
+{% block page_title %}Quản lý Bản sách vật lý (Book Copies){% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div style="padding: 16px 24px;">
+    <form method="GET" action="/admin/copies" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+      <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
+        <label style="font-size: 0.8rem;">Tìm kiếm</label>
+        <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Mã bản sách, tên sách...">
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+        <label style="font-size: 0.8rem;">Tình trạng</label>
+        <select name="condition">
+          <option value="">Tất cả</option>
+          <option value="new" {% if current_condition == 'new' %}selected{% endif %}>Mới</option>
+          <option value="like_new" {% if current_condition == 'like_new' %}selected{% endif %}>Rất tốt</option>
+          <option value="good" {% if current_condition == 'good' %}selected{% endif %}>Tốt</option>
+          <option value="fair" {% if current_condition == 'fair' %}selected{% endif %}>Khá</option>
+          <option value="poor" {% if current_condition == 'poor' %}selected{% endif %}>Kém</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+        <label style="font-size: 0.8rem;">Lưu thông</label>
+        <select name="status">
+          <option value="">Tất cả</option>
+          <option value="available" {% if current_status == 'available' %}selected{% endif %}>Khả dụng</option>
+          <option value="reserved" {% if current_status == 'reserved' %}selected{% endif %}>Đã giữ chỗ</option>
+          <option value="loaned" {% if current_status == 'loaned' %}selected{% endif %}>Đang mượn</option>
+          <option value="maintenance" {% if current_status == 'maintenance' %}selected{% endif %}>Bảo trì</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+        <label style="font-size: 0.8rem;">Hiển thị</label>
+        <select name="visibility">
+          <option value="">Tất cả</option>
+          <option value="published" {% if current_vis == 'published' %}selected{% endif %}>Công khai</option>
+          <option value="private" {% if current_vis == 'private' %}selected{% endif %}>Riêng tư</option>
+          <option value="internal" {% if current_vis == 'internal' %}selected{% endif %}>Nội bộ</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="height: 38px;">Lọc danh sách</button>
+      <a href="/admin/copies" class="btn btn-secondary" style="height: 38px;">Xóa lọc</a>
+    </form>
+  </div>
+</div>
+
+<!-- Copies Table -->
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Danh sách bản sách vật lý ({{ copies|length }})</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã bản sách</th>
+          <th>Tên sách</th>
+          <th>Chủ sở hữu</th>
+          <th>Người đang giữ</th>
+          <th>Tình trạng</th>
+          <th>Trạng thái lưu thông</th>
+          <th>Loại</th>
+          <th>Thời hạn tối đa</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if copies %}
+          {% for copy, book, owner_alias, holder_alias in copies %}
+          <tr>
+            <td><code>{{ copy.public_code }}</code></td>
+            <td><a href="/admin/books/{{ copy.book_id }}" style="color: var(--primary); text-decoration: none;">{{ book.title }}</a></td>
+            <td>{{ owner_alias or 'N/A' }}</td>
+            <td>{{ holder_alias or 'N/A' }}</td>
+            <td>
+              <span class="badge" style="background-color: #f0fdf4; color: #166534;">{{ copy.condition }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ copy.circulation_status }}">{{ copy.circulation_status }}</span>
+            </td>
+            <td>{{ copy.format or 'physical' }}{% if copy.is_partial %} <span style="color: var(--warning);">(1 phần)</span>{% endif %}</td>
+            <td>{{ copy.maximum_loan_days }} ngày</td>
+            <td>
+              <a href="/admin/copies/{{ copy.id }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">Chi tiết</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              {% if search_query or current_condition or current_status or current_vis %}
+                Không tìm thấy bản sách nào khớp bộ lọc. <a href="/admin/copies" style="color: var(--primary);">Xóa bộ lọc</a>
+              {% else %}
+                Chưa có bản sách vật lý nào.
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

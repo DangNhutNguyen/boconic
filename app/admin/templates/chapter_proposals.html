@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-header">
+  <div>
+    <h1>Quản lý đề xuất danh mục chương (Chapter Proposals)</h1>
+    <p class="subtitle">Xem xét và phê duyệt các đề xuất thêm, sửa hoặc lưu trữ chương từ cộng đồng.</p>
+  </div>
+</div>
+
+<div class="filter-bar" style="margin-bottom: 20px; display: flex; gap: 10px;">
+  <a href="/admin/chapter-proposals?status=all" class="btn btn-secondary {% if current_status == 'all' %}active{% endif %}">Tất cả</a>
+  <a href="/admin/chapter-proposals?status=pending" class="btn btn-secondary {% if current_status == 'pending' %}active{% endif %}">Đang chờ (Pending)</a>
+  <a href="/admin/chapter-proposals?status=approved" class="btn btn-secondary {% if current_status == 'approved' %}active{% endif %}">Đã duyệt (Approved)</a>
+  <a href="/admin/chapter-proposals?status=rejected" class="btn btn-secondary {% if current_status == 'rejected' %}active{% endif %}">Bị từ chối (Rejected)</a>
+</div>
+
+<div class="card">
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Thời gian</th>
+          <th>Đầu sách</th>
+          <th>Người đề xuất</th>
+          <th>Hành động</th>
+          <th>Nội dung đề xuất</th>
+          <th>Lý do & Bằng chứng</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in proposals %}
+        <tr>
+          <td style="white-space: nowrap; font-size: 0.85rem;">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            <strong>{{ p.book.title if p.book else 'N/A' }}</strong>
+            {% if p.chapter_id %}
+            <br><small class="text-muted">Mục tiêu: Chapter #{{ p.chapter.chapter_number if p.chapter else p.chapter_id }}</small>
+            {% endif %}
+          </td>
+          <td>{{ p.proposer.display_name if p.proposer else (p.proposer.telegram_user_id or p.proposer_id) }}</td>
+          <td>
+            <span class="badge badge-info">{{ p.action | upper }}</span>
+          </td>
+          <td style="font-size: 0.9rem;">
+            <div><strong>Tiêu đề:</strong> {{ p.proposed_data.get('title', 'N/A') }}</div>
+            <div><strong>Mã/Số:</strong> {{ p.proposed_data.get('chapter_code') or p.proposed_data.get('chapter_number', 'N/A') }}</div>
+            {% if p.proposed_data.get('page_start') is not none %}
+            <div><strong>Trang:</strong> {{ p.proposed_data.get('page_start') }} – {{ p.proposed_data.get('page_end') }}</div>
+            {% endif %}
+            {% if p.proposed_data.get('topics') %}
+            <div><small>Chủ đề: {{ p.proposed_data.get('topics') | join(', ') }}</small></div>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.9rem; max-width: 250px;">
+            <div><em>{{ p.reason }}</em></div>
+            {% if p.source_evidence %}
+            <small class="text-muted">Nguồn: {{ p.source_evidence }}</small>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.status == 'pending' %}
+            <span class="badge badge-warning">Đang chờ</span>
+            {% elif p.status == 'approved' %}
+            <span class="badge badge-success">Đã duyệt</span>
+            {% elif p.status == 'rejected' %}
+            <span class="badge badge-danger">Từ chối</span>
+            {% else %}
+            <span class="badge">{{ p.status }}</span>
+            {% endif %}
+          </td>
+          <td style="white-space: nowrap;">
+            {% if p.status == 'pending' %}
+            <form action="/admin/chapter-proposals/{{ p.id }}/review" method="POST" style="display: inline-block; margin-right: 4px;">
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Xác nhận phê duyệt đề xuất và cập nhật vào danh mục chung?');">
+                Duyệt
+              </button>
+            </form>
+            <form action="/admin/chapter-proposals/{{ p.id }}/review" method="POST" style="display: inline-block;">
+              <input type="hidden" name="action" value="reject">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Từ chối đề xuất này?');">
+                Từ chối
+              </button>
+            </form>
+            {% else %}
+            <small class="text-muted">Bởi: {{ p.reviewed_by or 'Admin' }}</small>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            Không có đề xuất chương nào trong danh sách.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

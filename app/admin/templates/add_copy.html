@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm bản vật lý — {{ book.title }}{% endblock %}
+{% block page_title %}Thêm bản sách vật lý{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+  <a href="/admin/books" style="color: var(--primary); text-decoration: none;">Đầu sách</a>
+  <span style="margin: 0 8px;">/</span>
+  <a href="/admin/books/{{ book.id }}" style="color: var(--primary); text-decoration: none;">{{ book.title }}</a>
+  <span style="margin: 0 8px;">/</span>
+  <span>Thêm bản vật lý</span>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Book Summary -->
+<div class="data-card" style="margin-bottom: 24px;">
+  <div style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <strong>{{ book.title }}</strong>
+      <span style="color: var(--text-muted); margin-left: 12px;">
+        {% for ba in book.authors %}{{ ba.author.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </span>
+    </div>
+    <span class="badge badge-available">Bản hiện tại: {{ book.copies|length }}</span>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Khai báo bản sách vật lý mới</h2>
+  </div>
+  <div style="padding: 24px;">
+    <form action="/admin/books/{{ book.id }}/copies/add" method="POST">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Chủ sở hữu (Owner) *</label>
+          <select name="owner_id" required>
+            <option value="">-- Chọn chủ sở hữu --</option>
+            {% for u in users %}
+            <option value="{{ u.id }}">{{ u.display_name or u.public_alias }} ({{ u.public_alias }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số lượng bản muốn thêm</label>
+          <input type="number" name="quantity" min="1" max="20" value="1">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Mỗi bản sẽ có mã riêng</span>
+        </div>
+        <div class="form-group">
+          <label>Tình trạng sách (Condition) *</label>
+          <select name="condition" required>
+            <option value="new">Mới (99-100%)</option>
+            <option value="like_new">Rất tốt (90-95%)</option>
+            <option value="good" selected>Tốt (80-90%)</option>
+            <option value="fair">Khá (70-80%)</option>
+            <option value="poor">Kém (dưới 70%)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Loại bản sách</label>
+          <select name="format_type">
+            <option value="physical" selected>Bản in gốc (Physical)</option>
+            <option value="photocopy">Bản photocopy</option>
+            <option value="digital">Tài liệu số</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thời hạn mượn tối đa (ngày)</label>
+          <input type="number" name="maximum_loan_days" min="1" max="365" value="14">
+        </div>
+        <div class="form-group">
+          <label>Chính sách cho mượn</label>
+          <select name="lending_policy">
+            <option value="free_return" selected>Tự do mượn & trả</option>
+            <option value="reference_only">Chỉ tham khảo tại chỗ</option>
+            <option value="restricted">Hạn chế cho mượn</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quyền hiển thị (Visibility)</label>
+          <select name="visibility">
+            <option value="published" selected>Công khai</option>
+            <option value="internal">Nội bộ</option>
+            <option value="private">Riêng tư</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Bản đầy đủ?</label>
+          <select name="is_partial">
+            <option value="false" selected>Đầy đủ (Full copy)</option>
+            <option value="true">Một phần (Partial / thiếu trang)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Barcode bên ngoài (tùy chọn)</label>
+        <input type="text" name="barcode" placeholder="Mã barcode nếu có sẵn trên sách">
+      </div>
+      <div class="form-group">
+        <label>Vị trí lưu trữ riêng (tùy chọn)</label>
+        <input type="text" name="storage_location" placeholder="Ví dụ: Kệ A3, tủ phòng lab">
+      </div>
+      <div class="form-group">
+        <label>Ghi chú</label>
+        <textarea name="notes" rows="2" placeholder="Ghi chú thêm về bản sách này"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button type="submit" class="btn btn-primary">Tạo bản sách</button>
+        <button type="submit" name="action" value="save_add_another" class="btn btn-secondary">Tạo & Thêm tiếp</button>
+        <a href="/admin/books/{{ book.id }}" class="btn btn-secondary">Hủy</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

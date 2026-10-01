@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Dynamic Custom Fields{% endblock %}
+{% block page_title %}Dynamic Custom Fields Management{% endblock %}
+
+{% block content %}
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Thêm trường tùy chỉnh mới</h2>
+  </div>
+  <div style="padding: 24px;">
+    <form action="/admin/custom-fields" method="POST">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Đối tượng áp dụng *</label>
+          <select name="entity_type" required>
+            <option value="book">Đầu sách (Book)</option>
+            <option value="book_copy">Bản sách vật lý (BookCopy)</option>
+            <option value="user">Người dùng (User)</option>
+            <option value="organization">Tổ chức / Thư viện (Organization)</option>
+            <option value="loan">Lượt mượn (Loan)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mã trường (Key slug) *</label>
+          <input type="text" name="key" required placeholder="ví dụ: target_exam">
+        </div>
+        <div class="form-group">
+          <label>Tên hiển thị (Label) *</label>
+          <input type="text" name="label" required placeholder="ví dụ: Kỳ thi mục tiêu">
+        </div>
+        <div class="form-group">
+          <label>Kiểu dữ liệu (Field Type) *</label>
+          <select name="field_type" required>
+            <option value="text">Văn bản ngắn (text)</option>
+            <option value="textarea">Văn bản dài (textarea)</option>
+            <option value="integer">Số nguyên (integer)</option>
+            <option value="decimal">Số thập phân (decimal)</option>
+            <option value="boolean">Đúng / Sai (boolean)</option>
+            <option value="date">Ngày (date)</option>
+            <option value="single_select">Chọn một (single_select)</option>
+            <option value="multi_select">Chọn nhiều (multi_select)</option>
+            <option value="url">Đường dẫn web (url)</option>
+            <option value="email">Email (email)</option>
+            <option value="phone">Số điện thoại (phone)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tùy chọn cho Select (nếu có, dạng id:label cách nhau bởi dấu phẩy)</label>
+          <input type="text" name="options_raw" placeholder="thptqg:THPT Quốc Gia, hsg:Học sinh giỏi">
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
+          <input type="checkbox" id="required" name="required" value="true">
+          <label for="required" style="margin-bottom: 0;">Bắt buộc nhập</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Tạo trường tùy chỉnh</button>
+    </form>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="card-header">
+    <h2 class="card-title">Danh sách trường tùy chỉnh ({{ fields|length }})</h2>
+  </div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Thực thể</th>
+          <th>Mã (Key)</th>
+          <th>Tên hiển thị</th>
+          <th>Kiểu dữ liệu</th>
+          <th>Bắt buộc</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if fields %}
+          {% for f in fields %}
+          <tr>
+            <td><code>{{ f.entity_type }}</code></td>
+            <td><strong>{{ f.key }}</strong></td>
+            <td>{{ f.label }}</td>
+            <td><code>{{ f.field_type }}</code></td>
+            <td>{{ 'Có' if f.required else 'Không' }}</td>
+            <td>
+              <span class="badge {% if f.active %}badge-available{% else %}badge-returned{% endif %}">
+                {{ 'Hoạt động' if f.active else 'Lưu trữ' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Chưa có trường tùy chỉnh nào được định nghĩa.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
