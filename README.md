@@ -1,5 +1,11 @@
 # BOCONIC Book Connect
 
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy_2.0_Async-d71f00?style=flat-square&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org)
+[![aiogram](https://img.shields.io/badge/Telegram_Bot-aiogram_3.x-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://docs.aiogram.dev)
+[![Pydantic](https://img.shields.io/badge/Data_Validation-Pydantic_v2-E92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
+[![Tests](https://img.shields.io/badge/Tests-66%20Passed-brightgreen?style=flat-square&logo=pytest&logoColor=white)](tests/)
+
 Boconic Telegram Bot là sản phẩm bot kết nối người mượn sách và người cho mượn sách. Techstack hoàn toàn dựa trên quy trình host, tự động hóa, quản lý các hệ thống thông tin đến từ người dùng. Sản phẩm chỉ sử dụng cho mục đích học tập và phục vụ quá trình học tập, nghiên cứu tại Trường. Hiện tại, sản phẩm này là một phần nằm trong bài làm thử tuyển chọn Câu lạc bộ Trí tuệ nhân tạo – UIT. 
 
 **Sinh viênviên:** Nguyễn Huỳnh Đăng Nhựt.  
@@ -8,11 +14,7 @@ Boconic Telegram Bot là sản phẩm bot kết nối người mượn sách và
 Toàn bộ README này trình bày vấn đề mà em tiếp cận, cách Boconic kết nối nhu cầu với tài nguyên đang có, cấu trúc kỹ thuật và quy trình để khởi chạy, kiểm tra, quản lý sản phẩm. Với mỗi user, em xem họ vừa là một người học đang cần tài liệu, vừa có thể là người đang giữ những tài nguyên mà người khác cần. 
 Do thời gian ngắn (Có hạn) của quy trình nộp sản phẩm và các vấn đề gia đình liên quan, toàn bộ sản phẩm khi này được tổ chức logic, tech, quá trình xử lý, mô hình, công cụ bởi em. Và xử lý kỹ thuật đến khoảng 55% trên Antigravity – model Gemini 3.8 Flash và 20% trên Model Claude Opus 4.6. Bot được xây dựng dựa theo Botfather Auth – VPS được dùng trên máy Ubuntu (Own Host), dữ liệu không công khai và đảm bảo các quyền riêng tự, và các vấn đề liên quan đến pháp luật hiện hành; em mong các anh chị sẽ thông cảm cho em!
 
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.110+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy_2.0_Async-d71f00?style=flat-square&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org)
-[![aiogram](https://img.shields.io/badge/Telegram_Bot-aiogram_3.x-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://docs.aiogram.dev)
-[![Pydantic](https://img.shields.io/badge/Data_Validation-Pydantic_v2-E92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
-[![Tests](https://img.shields.io/badge/Tests-66%20Passed-brightgreen?style=flat-square&logo=pytest&logoColor=white)](tests/)
+
 
 ![Bot Telegram](assets/bot-telegram.jpg)
 *Hình 1. Bot Telegram và các tính năng của ẻm.*
