@@ -139,18 +139,18 @@ Do thời gian nộp sản phẩm có hạn và một số vấn đề gia đìn
 
 Bot được đăng ký qua BotFather; môi trường host mà em lựa chọn là máy Ubuntu do em tự quản lý. Việc tự host giúp em chủ động cấu hình và quản lý dữ liệu, đồng thời đặt trách nhiệm sao lưu, bảo mật và duy trì hoạt động về phía người vận hành.
 
-| Công nghệ | Vai trò | Tài liệu tham khảo |
-| --- | --- | --- |
-| Python 3.12 trở lên | Ngôn ngữ và môi trường chạy sản phẩm | [6] |
-| FastAPI và Uvicorn | Backend API và server ASGI; FastAPI hỗ trợ OpenAPI và tài liệu API | [7][15] |
-| Pydantic v2 | Mô hình dữ liệu, kiểm tra kiểu và ràng buộc đầu vào | [8] |
-| SQLAlchemy 2.0 với asyncio | ORM và thao tác database bất đồng bộ | [9] |
-| SQLite và PostgreSQL | Database cho môi trường cục bộ và triển khai tương ứng | [16][17] |
-| Alembic | Quản lý thay đổi schema bằng migration | [10] |
-| aiogram 3.x | Tích hợp Telegram Bot API, handler, keyboard và FSM | [11] |
-| HTTPX | Giao tiếp HTTP giữa bot và API | [18] |
-| Jinja2, HTMX và CSS | Render và cập nhật giao diện quản trị | [12][13] |
-| pytest | Tổ chức và chạy kiểm thử tự động | [14] |
+| Công nghệ | Vai trò |
+| --- | --- | 
+| Python 3.12 trở lên | Ngôn ngữ và môi trường chạy sản phẩm |
+| FastAPI và Uvicorn | Backend API và server ASGI; FastAPI hỗ trợ OpenAPI và tài liệu API |
+| Pydantic v2 | Mô hình dữ liệu, kiểm tra kiểu và ràng buộc đầu vào |
+| SQLAlchemy 2.0 với asyncio | ORM và thao tác database bất đồng bộ | 
+| SQLite và PostgreSQL | Database cho môi trường cục bộ và triển khai tương ứng |
+| Alembic | Quản lý thay đổi schema bằng migration |
+| aiogram 3.x | Tích hợp Telegram Bot API, handler, keyboard và FSM |
+| HTTPX | Giao tiếp HTTP giữa bot và API |
+| Jinja2, HTMX và CSS | Render và cập nhật giao diện quản trị |
+| pytest | Tổ chức và chạy kiểm thử tự động |
 
 ## 9 Database và phân phối dữ liệu
 
